@@ -1,9 +1,23 @@
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ProductCard } from "@/components/ProductCard";
-import { mockProducts } from "@/data/mockProducts";
+import { Product } from "@/types/product";
 
-export default function Home() {
+export default async function Home() {
+  let products: Product[] = [];
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/v1/products", {
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      products = await res.json();
+    }
+  } catch (error) {
+    console.error("Gagal mengambil data produk:", error);
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <Navbar />
@@ -19,11 +33,17 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {mockProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {products.length === 0 ? (
+            <div className="rounded-lg border border-border/60 p-8 text-center text-muted-foreground">
+              Tidak ada produk yang tersedia saat ini.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
         </div>
       </main>
 

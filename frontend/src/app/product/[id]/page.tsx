@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { mockProducts } from "@/data/mockProducts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Product } from "@/types/product";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -15,8 +15,24 @@ interface ProductDetailPageProps {
 export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
-  const { id } = await params;
-  const product = mockProducts.find((p) => p.id === id);
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
+
+  let products: Product[] = [];
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/v1/products", {
+      cache: "no-store",
+    });
+
+    if (res.ok) {
+      products = await res.json();
+    }
+  } catch (error) {
+    console.error("Gagal mengambil data produk:", error);
+  }
+
+  const product = products.find((p) => p.id === id);
 
   if (!product) {
     return (
