@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ArrowLeft, ShoppingCart } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AddToCartButton } from "@/components/AddToCartButton";
 import { Product } from "@/types/product";
 
 interface ProductDetailPageProps {
@@ -138,14 +139,7 @@ export default async function ProductDetailPage({
 
               {/* Tombol Tambah ke Keranjang */}
               <div className="pt-4">
-                <Button
-                  size="lg"
-                  className="w-full cursor-pointer text-base font-semibold"
-                  disabled={product.stock_quantity <= 0}
-                >
-                  <ShoppingCart className="mr-2 h-5 w-5" />
-                  Tambah ke Keranjang
-                </Button>
+                <AddToCartButton product={product} />
               </div>
             </div>
           </div>
