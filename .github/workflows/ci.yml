@@ -37,8 +37,9 @@ jobs:
 
       - name: Validate FastAPI import (smoke test)
         env:
-          DATABASE_URL: sqlite:///:memory:
-        run: python -c "import main; assert main.app is not None"
+          DATABASE_URL: "sqlite:///:memory:"
+        run: |
+          python -c "import main; assert main.app is not None"
 
   frontend-ci:
     name: Frontend CI (Next.js Type Check & Production Build)
@@ -66,6 +67,6 @@ jobs:
 
       - name: Next.js Production Build
         env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
-          NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: SB-Mid-client-dummy-ci
+          NEXT_PUBLIC_API_URL: "http://localhost:8000"
+          NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: "SB-Mid-client-dummy-ci"
         run: npm run build
