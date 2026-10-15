@@ -2,12 +2,14 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ProductCard } from "@/components/ProductCard";
 import { Product } from "@/types/product";
+import { getServerApiUrl } from "@/lib/api";
 
 export default async function Home() {
   let products: Product[] = [];
 
   try {
-    const res = await fetch("http://127.0.0.1:8000/api/v1/products", {
+    const apiUrl = getServerApiUrl();
+    const res = await fetch(`${apiUrl}/api/v1/products`, {
       cache: "no-store",
     });
 

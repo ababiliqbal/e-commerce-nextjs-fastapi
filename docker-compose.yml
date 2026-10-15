@@ -11,6 +11,41 @@ services:
       - "5555:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d ecommerce_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: ecommerce_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://admin:rahasia@postgres:5432/ecommerce_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: ${NEXT_PUBLIC_MIDTRANS_CLIENT_KEY:-Mid-client-M4BsTcoqyn2rkvrL}
+    container_name: ecommerce_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      INTERNAL_API_URL: http://backend:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

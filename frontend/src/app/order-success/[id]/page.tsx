@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PayButton } from "@/components/PayButton";
 import { Product } from "@/types/product";
+import { getServerApiUrl } from "@/lib/api";
 
 interface OrderItem {
   product_id: string;
@@ -41,11 +42,12 @@ export default async function OrderSuccessPage({
   const productsMap = new Map<string, Product>();
 
   try {
+    const apiUrl = getServerApiUrl();
     const [orderRes, productsRes] = await Promise.all([
-      fetch(`http://127.0.0.1:8000/api/v1/orders/${id}`, {
+      fetch(`${apiUrl}/api/v1/orders/${id}`, {
         cache: "no-store",
       }),
-      fetch("http://127.0.0.1:8000/api/v1/products", {
+      fetch(`${apiUrl}/api/v1/products`, {
         cache: "no-store",
       }),
     ]);

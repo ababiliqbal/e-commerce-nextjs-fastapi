@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useCartStore } from "@/store/useCartStore";
+import { getClientApiUrl } from "@/lib/api";
 
 const checkoutSchema = z.object({
   customer_name: z
@@ -126,7 +127,8 @@ export default function CartPage() {
         })),
       };
 
-      const res = await fetch("http://127.0.0.1:8000/api/v1/orders/checkout", {
+      const apiUrl = getClientApiUrl();
+      const res = await fetch(`${apiUrl}/api/v1/orders/checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

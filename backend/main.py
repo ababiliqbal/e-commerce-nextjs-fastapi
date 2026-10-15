@@ -47,9 +47,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-origins = [
-    "http://localhost:3000",
-]
+allowed_origins_raw = os.getenv(
+    "ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+)
+origins = [origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
@@ -58,6 +59,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health", status_code=status.HTTP_200_OK)
+def health_check():
+    return {"status": "healthy"}
+
 
 
 @app.get("/api/v1/products", response_model=List[ProductResponse])

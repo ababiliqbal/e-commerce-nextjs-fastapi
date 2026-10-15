@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { Product } from "@/types/product";
+import { getServerApiUrl } from "@/lib/api";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -22,7 +23,8 @@ export default async function ProductDetailPage({
   let products: Product[] = [];
 
   try {
-    const res = await fetch("http://127.0.0.1:8000/api/v1/products", {
+    const apiUrl = getServerApiUrl();
+    const res = await fetch(`${apiUrl}/api/v1/products`, {
       cache: "no-store",
     });
 
