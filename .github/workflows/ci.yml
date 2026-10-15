@@ -62,8 +62,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: TypeScript Type Checking
-        run: npx tsc --noEmit
+      - name: Generate Next.js Route Types & TypeScript Check
+        run: |
+          npx next typegen
+          npx tsc --noEmit
 
       - name: Next.js Production Build
         env:
