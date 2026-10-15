@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/useCartStore";
 
 export function Navbar() {
   const [mounted, setMounted] = useState(false);
   const totalItems = useCartStore((state) => state.getTotalItems());
+  const lastOrderId = useCartStore((state) => state.lastOrderId);
 
   useEffect(() => {
     setMounted(true);
@@ -24,6 +25,20 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-3">
+          {mounted && lastOrderId && (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="cursor-pointer gap-2 transition-transform active:scale-95 text-xs sm:text-sm font-medium"
+            >
+              <Link href={`/order-success/${lastOrderId}`}>
+                <Receipt className="h-4 w-4" />
+                <span>Cek Pesanan</span>
+              </Link>
+            </Button>
+          )}
+
           <Button
             asChild
             variant="outline"

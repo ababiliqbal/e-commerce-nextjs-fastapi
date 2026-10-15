@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { CheckCircle2, ArrowLeft, ShoppingBag } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, ArrowLeft, ShoppingBag } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { PayButton } from "@/components/PayButton";
 import { Product } from "@/types/product";
 
 interface OrderItem {
@@ -19,6 +20,7 @@ interface OrderResponse {
   customer_email: string;
   total_amount: number;
   status: string;
+  payment_gateway_ref?: string | null;
   created_at: string;
   items: OrderItem[];
 }
@@ -103,19 +105,70 @@ export default async function OrderSuccessPage({
 
       <main className="flex-1 py-12">
         <div className="container mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          {/* Header Sukses */}
+          {/* Header Status */}
           <div className="text-center space-y-4 mb-8">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-              <CheckCircle2 className="h-10 w-10" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-                Pesanan Berhasil Dibuat!
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-                Terima kasih atas pesanan Anda. Kami telah menerima dan sedang memprosesnya.
-              </p>
-            </div>
+            {order.status === "PAID" && (
+              <>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+                  <CheckCircle2 className="h-10 w-10" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+                    Pembayaran Berhasil!
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+                    Terima kasih atas pesanan Anda. Kami telah menerima pembayaran dan pesanan akan segera diproses.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {order.status === "PENDING" && (
+              <>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
+                  <Clock className="h-10 w-10" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+                    Pesanan Berhasil Dibuat!
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+                    Silakan selesaikan pembayaran Anda sebelum waktu habis untuk mengonfirmasi pesanan.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {order.status === "CANCELLED" && (
+              <>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive dark:bg-destructive/20">
+                  <XCircle className="h-10 w-10" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+                    Pesanan Dibatalkan
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+                    Pesanan ini telah dibatalkan atau kedaluwarsa. Stok barang telah dikembalikan ke katalog.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {order.status !== "PAID" &&
+              order.status !== "PENDING" &&
+              order.status !== "CANCELLED" && (
+                <>
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <CheckCircle2 className="h-10 w-10" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+                      Status Pesanan: {order.status}
+                    </h1>
+                  </div>
+                </>
+              )}
           </div>
 
           {/* Kartu Rincian Pesanan */}
@@ -131,9 +184,37 @@ export default async function OrderSuccessPage({
                   </p>
                 </div>
                 <div>
-                  <Badge variant="secondary" className="font-semibold uppercase tracking-wider">
-                    {order.status}
-                  </Badge>
+                  {order.status === "PAID" && (
+                    <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white font-semibold uppercase tracking-wider">
+                      LUNAS (PAID)
+                    </Badge>
+                  )}
+                  {order.status === "PENDING" && (
+                    <Badge
+                      variant="secondary"
+                      className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300/40 font-semibold uppercase tracking-wider"
+                    >
+                      Menunggu Pembayaran
+                    </Badge>
+                  )}
+                  {order.status === "CANCELLED" && (
+                    <Badge
+                      variant="destructive"
+                      className="font-semibold uppercase tracking-wider"
+                    >
+                      DIBATALKAN / KEDALUWARSA
+                    </Badge>
+                  )}
+                  {order.status !== "PAID" &&
+                    order.status !== "PENDING" &&
+                    order.status !== "CANCELLED" && (
+                      <Badge
+                        variant="secondary"
+                        className="font-semibold uppercase tracking-wider"
+                      >
+                        {order.status}
+                      </Badge>
+                    )}
                 </div>
               </div>
             </CardHeader>
@@ -194,12 +275,24 @@ export default async function OrderSuccessPage({
                   {formatPrice(order.total_amount)}
                 </span>
               </div>
+
+              {/* Midtrans Snap PayButton jika status PENDING */}
+              {order.status === "PENDING" && order.payment_gateway_ref && (
+                <div className="border-t border-border/60 pt-6 space-y-3">
+                  <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4 text-center">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                      Pesanan Anda belum dibayar. Klik tombol di bawah untuk menyelesaikan pembayaran via Midtrans Snap.
+                    </p>
+                  </div>
+                  <PayButton snapToken={order.payment_gateway_ref} />
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Tombol Aksi */}
           <div className="flex justify-center">
-            <Button asChild size="lg" className="cursor-pointer">
+            <Button asChild size="lg" variant="outline" className="cursor-pointer">
               <Link href="/" className="inline-flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" />
                 Kembali ke Katalog

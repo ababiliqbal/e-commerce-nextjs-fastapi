@@ -14,12 +14,19 @@ export interface CartStore {
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  lastOrderId: string | null;
+  setLastOrderId: (orderId: string | null) => void;
 }
 
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      lastOrderId: null,
+
+      setLastOrderId: (orderId: string | null) => {
+        set({ lastOrderId: orderId });
+      },
 
       addItem: (product: Product, quantity = 1) => {
         if (quantity <= 0) return;

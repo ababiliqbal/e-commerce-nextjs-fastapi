@@ -40,9 +40,24 @@ class OrderResponse(BaseModel):
     id: UUID
     customer_name: str
     customer_email: str
+    customer_phone: str
+    shipping_address: str
     total_amount: float
     status: str
+    payment_gateway_ref: Optional[str] = None
     created_at: datetime
     items: List[OrderItemResponse]
 
     model_config = {"from_attributes": True}
+
+
+class MidtransWebhookPayload(BaseModel):
+    order_id: str
+    status_code: str
+    gross_amount: str
+    signature_key: str
+    transaction_status: str
+    fraud_status: Optional[str] = None
+
+    model_config = {"extra": "ignore"}
+

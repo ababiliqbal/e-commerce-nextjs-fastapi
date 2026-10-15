@@ -40,7 +40,7 @@ export default function CartPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { items, updateQuantity, removeItem, clearCart, getTotalPrice } =
+  const { items, updateQuantity, removeItem, clearCart, getTotalPrice, setLastOrderId } =
     useCartStore();
 
   const {
@@ -153,6 +153,7 @@ export default function CartPage() {
       }
 
       const orderData = await res.json();
+      setLastOrderId(orderData.id);
       clearCart();
       router.push(`/order-success/${orderData.id}`);
     } catch (err) {
