@@ -124,8 +124,8 @@ Pastikan **Docker Desktop** sudah menyala di komputer Anda.
 
 ## 📄 Dokumentasi Rekayasa Lengkap
 
-- [Software Requirements Specification (SRS)](<./docs/Software_Requirements_Specification_(SRS).md>)
-- [Software Design Document (SDD)](<./docs/Software_Design_Document_(SDD).md>)
+- [Software Requirements Specification (SRS)](<docs/Software%20Requirements%20Specification%20(SRS).md>)
+- [Software Design Document (SDD)](<docs/Software%20Design%20Document%20(SDD).md>)
 
 ---
 
