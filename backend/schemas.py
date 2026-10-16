@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ProductResponse(BaseModel):
@@ -26,6 +26,13 @@ class CheckoutRequest(BaseModel):
     customer_phone: str
     shipping_address: str
     items: List[CheckoutItemRequest] = Field(..., min_length=1)
+
+    @field_validator("customer_name", "customer_phone", "shipping_address")
+    @classmethod
+    def validate_no_html_tags(cls, value: str) -> str:
+        if "<" in value or ">" in value:
+            raise ValueError("Karakter tidak valid terdeteksi.")
+        return value
 
 
 class OrderItemResponse(BaseModel):

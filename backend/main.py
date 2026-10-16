@@ -9,8 +9,12 @@ from uuid import UUID
 
 from dotenv import load_dotenv
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db
@@ -41,16 +45,38 @@ async def lifespan(app: FastAPI):
     yield
 
 
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="E-Commerce API",
     version="1.0.0",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
 
-allowed_origins_raw = os.getenv(
-    "ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
-)
-origins = [origin.strip() for origin in allowed_origins_raw.split(",") if origin.strip()]
+
+@app.exception_handler(RateLimitExceeded)
+def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"detail": "Terlalu banyak permintaan. Silakan coba lagi nanti."},
+    )
+
+
+allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "").strip()
+if allowed_origins_raw:
+    # Membaca daftar origin secara ketat dan mencegah celah wildcard (*)
+    origins = [
+        origin.strip()
+        for origin in allowed_origins_raw.split(",")
+        if origin.strip() and origin.strip() != "*"
+    ]
+else:
+    origins = []
+
+# Jika ALLOWED_ORIGINS kosong atau hanya berisi wildcard, defaultkan hanya ke http://localhost:3000
+if not origins:
+    origins = ["http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,9 +104,14 @@ def get_products(db: Session = Depends(get_db)):
     response_model=OrderResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def checkout(request: CheckoutRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def checkout(
+    request: Request,
+    payload: CheckoutRequest,
+    db: Session = Depends(get_db),
+):
     # Validasi bahwa items tidak kosong
-    if not request.items:
+    if not payload.items:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Keranjang belanja tidak boleh kosong",
@@ -92,7 +123,7 @@ def checkout(request: CheckoutRequest, db: Session = Depends(get_db)):
         midtrans_items = []
 
         # Loop setiap item di request, query Product dari database menggunakan .with_for_update()
-        for item in request.items:
+        for item in payload.items:
             product = (
                 db.query(Product)
                 .filter(Product.id == item.product_id)
@@ -140,10 +171,10 @@ def checkout(request: CheckoutRequest, db: Session = Depends(get_db)):
         order_id = uuid.uuid4()
         new_order = Order(
             id=order_id,
-            customer_name=request.customer_name,
-            customer_email=request.customer_email,
-            customer_phone=request.customer_phone,
-            shipping_address=request.shipping_address,
+            customer_name=payload.customer_name,
+            customer_email=payload.customer_email,
+            customer_phone=payload.customer_phone,
+            shipping_address=payload.shipping_address,
             total_amount=total_amount,
             status=OrderStatus.PENDING.value,
             items=order_items_to_create,
@@ -158,11 +189,11 @@ def checkout(request: CheckoutRequest, db: Session = Depends(get_db)):
                 "gross_amount": int(total_amount),
             },
             "customer_details": {
-                "first_name": request.customer_name,
-                "email": request.customer_email,
-                "phone": request.customer_phone,
+                "first_name": payload.customer_name,
+                "email": payload.customer_email,
+                "phone": payload.customer_phone,
                 "shipping_address": {
-                    "address": request.shipping_address,
+                    "address": payload.shipping_address,
                 },
             },
             "item_details": midtrans_items,
