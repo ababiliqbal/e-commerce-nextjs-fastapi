@@ -1,181 +1,155 @@
-# **Software Requirements Specification (SRS)**
+# Software Requirements Specification (SRS)
 
-## **Platform E-Commerce Berbasis RESTful Microservices**
+## Platform E-Commerce Berbasis RESTful Microservices
 
-**Versi:** 1.0 (MVP) **Status:** Draf
+### Riwayat Dokumen (Document Control)
 
-## **BAB I: PENDAHULUAN**
+| Versi | Tanggal     | Penulis         | Deskripsi Perubahan (Change Log)                                                                             | Status  |
+| :---- | :---------- | :-------------- | :----------------------------------------------------------------------------------------------------------- | :------ |
+| 1.0.0 | 12 Okt 2026 | M. Iqbal Ababil | Inisialisasi MVP, Guest Checkout, Midtrans Snap.                                                             | Dirilis |
+| 1.1.0 | 16 Okt 2026 | M. Iqbal Ababil | DRAF: Refactoring UI/UX (CRO Pattern, Brand Color 'Tech Violet'), Security Audit (CORS, Rate Limiting, XSS). | Draf    |
+| 1.2.0 | TBA         | M. Iqbal Ababil | DRAF: Penambahan Modul IAM (Login/Register JWT), ERD Users & Product_Images.                                 | Rencana |
+| 2.0.0 | TBA         | M. Iqbal Ababil | DRAF: Modul Integrasi Eksternal (API Logistik 3PL), Ongkos Kirim Dinamis.                                    | Rencana |
 
-### **1.1 Tujuan (*Purpose*)**
+**Versi:** 1.1.0 **Status:** Draf
 
-Dokumen ini mendeskripsikan spesifikasi kebutuhan perangkat lunak untuk sistem aplikasi e-commerce *Minimum Viable Product* (MVP). Sistem ini dirancang sebagai platform transaksi ritel digital terdesentralisasi (arsitektur *decoupled*). Sistem ini akan memfasilitasi pembeli untuk melihat katalog produk, memasukkan produk ke keranjang, menyelesaikan pesanan melalui mekanisme *Guest Checkout*, dan melakukan pembayaran digital yang terverifikasi otomatis. Dokumen ini ditujukan bagi tim pengembang (*developer*), *Project Manager*, serta pemangku kepentingan (calon klien *software house*) untuk memahami fungsi, batasan, dan target operasional sistem.
+## BAB I: PENDAHULUAN
 
-### **1.2 Cakupan Proyek (*Project Scope*)**
+### 1.1 Tujuan (Purpose)
 
-Proyek ini dinamakan "E-Commerce Web Platform (MVP Version)". Cakupan otomatisasi yang akan diselesaikan oleh perangkat lunak ini meliputi:
+Dokumen ini mendeskripsikan spesifikasi kebutuhan perangkat lunak untuk sistem aplikasi e-commerce _Minimum Viable Product_ (MVP) dan _incremental update_ V1.1.0. Sistem ini dirancang sebagai platform transaksi ritel digital terdesentralisasi (arsitektur _decoupled_). Sistem memfasilitasi pembeli untuk melihat katalog produk, memasukkan produk ke keranjang, menyelesaikan pesanan melalui mekanisme _Guest Checkout_, dan melakukan pembayaran digital yang terverifikasi otomatis. Dokumen ini ditujukan bagi tim pengembang (_developer_), _Project Manager_, serta pemangku kepentingan untuk memahami fungsi, batasan, dan target operasional sistem.
 
-* Penyajian katalog produk secara instan menggunakan teknik rendering dinamis (*Server-Side Rendering*).  
-* Manajemen status (*state management*) keranjang belanja di sisi klien sebelum sesi *checkout*.  
-* Otomatisasi pencatatan pesanan dan pengelolaan siklus hidup transaksi (*Transaction Lifecycle*) melalui RESTful API.  
-* Integrasi sistem pihak ketiga (*Payment Gateway*) untuk memvalidasi pembayaran secara *real-time* tanpa intervensi manual dari administrator.  
-* *Scope Exclusions* (Di luar cakupan fase ini): Sistem otentikasi/registrasi pengguna kompleks, perhitungan ongkos kirim dinamis berbasis geolokasi, *dashboard* admin tingkat lanjut (CMS visual), dan sistem *review/rating*.
+### 1.2 Cakupan Proyek (Project Scope)
 
-### **1.3 Karakteristik Lingkungan (*Environmental Characteristics*)**
+Proyek ini dinamakan "E-Commerce Web Platform (MVP Version)". Cakupan otomatisasi yang diselesaikan meliputi:
 
-Sistem ini dibangun di atas arsitektur *Client-Server* terpisah dengan spesifikasi lingkungan interaksi sebagai berikut:
+- Penyajian katalog produk secara instan menggunakan teknik rendering dinamis (_Server-Side Rendering_).
+- Manajemen status (_state management_) keranjang belanja di sisi klien sebelum sesi _checkout_.
+- Otomatisasi pencatatan pesanan dan pengelolaan siklus hidup transaksi (_Transaction Lifecycle_) melalui RESTful API.
+- Integrasi sistem pihak ketiga (_Payment Gateway_) untuk memvalidasi pembayaran secara _real-time_ tanpa intervensi manual dari administrator.
+- **[Ditambahkan V1.1.0]** Peningkatan pengalaman pengguna (_User Experience_) dengan prinsip _Conversion Rate Optimization_ (CRO) dan skema warna merek (_Brand Color_) "Tech Violet".
+- **[Ditambahkan V1.1.0]** Pengetatan postur keamanan (_Security Posture_) melawan _Brute Force_, _Over-permissive CORS_, dan _Cross-Site Scripting_ (XSS).
+- _Scope Exclusions_ (Di luar cakupan fase ini): Sistem otentikasi/registrasi pengguna kompleks, perhitungan ongkos kirim dinamis berbasis geolokasi, _dashboard_ admin tingkat lanjut (CMS visual), dan sistem _review/rating_.
 
-* **Lingkungan Eksekusi Klien (Frontend):** Berjalan di peramban web modern (Google Chrome, Mozilla Firefox, Safari) pada perangkat *desktop* dan *mobile*. Dikembangkan menggunakan kerangka kerja Next.js (React) dengan bahasa TypeScript.  
-* **Lingkungan Eksekusi Server (Backend):** Berjalan pada kontainer terisolasi berbasis Linux (Docker). Menggunakan kerangka kerja FastAPI (Python) yang menyediakan antarmuka RESTful API secara asinkron.  
-* **Sistem Manajemen Basis Data:** PostgreSQL digunakan sebagai pangkalan data relasional utama untuk menjamin integritas transaksional (ACID).  
-* **Interaksi Sistem Eksternal:** Sistem ini akan berkomunikasi dengan *Payment Gateway Server* (misal: Midtrans/Xendit) melalui protokol HTTPS/TLS 1.2+ menggunakan arsitektur *Webhook* asinkron.
+### 1.3 Karakteristik Lingkungan (Environmental Characteristics)
 
-## **BAB II: DESKRIPSI UMUM**
+Sistem dibangun di atas arsitektur _Client-Server_ terpisah dengan spesifikasi lingkungan interaksi sebagai berikut:
 
-### **2.1 Perspektif Produk (*Product Perspective*)**
+- **Lingkungan Eksekusi Klien (Frontend):** Berjalan di peramban web modern (Google Chrome, Mozilla Firefox, Safari) pada perangkat _desktop_ dan _mobile_. Dikembangkan menggunakan kerangka kerja Next.js (React) dengan bahasa TypeScript.
+- **Lingkungan Eksekusi Server (Backend):** Berjalan pada kontainer terisolasi berbasis Linux (Docker). Menggunakan kerangka kerja FastAPI (Python) yang menyediakan antarmuka RESTful API secara asinkron.
+- **Sistem Manajemen Basis Data:** PostgreSQL digunakan sebagai pangkalan data relasional utama untuk menjamin integritas transaksional (ACID).
+- **Interaksi Sistem Eksternal:** Sistem berkomunikasi dengan _Payment Gateway Server_ (misal: Midtrans/Xendit) melalui protokol HTTPS/TLS 1.2+ menggunakan arsitektur _Webhook_ asinkron.
 
-Sistem E-Commerce ini adalah produk baru dan independen (bukan sistem pengganti/migrasi dari sistem peninggalan atau *legacy system*). Sistem ini diposisikan sebagai platform mandiri dengan arsitektur berorientasi layanan (*service-oriented*). Dalam ekosistem yang lebih luas, produk ini dirancang *scalable*—siap untuk diintegrasikan dengan modul manajemen rantai pasok (*Supply Chain Management*) atau modul akuntansi perusahaan di fase pengembangan selanjutnya tanpa perlu merombak basis kode inti.
+## BAB II: DESKRIPSI UMUM
 
-### **2.2 Karakteristik Pengguna (*User Classes*)**
+### 2.1 Perspektif Produk (Product Perspective)
 
-Sistem MVP ini akan diakses oleh dua kelas pengguna utama:
+Sistem E-Commerce ini adalah produk baru dan independen. Sistem ini diposisikan sebagai platform mandiri dengan arsitektur berorientasi layanan (_service-oriented_). Dalam ekosistem yang lebih luas, produk ini dirancang _scalable_—siap untuk diintegrasikan dengan modul manajemen rantai pasok (_Supply Chain Management_) atau modul akuntansi perusahaan di fase pengembangan selanjutnya tanpa merombak basis kode inti.
 
-1. **Pelanggan Tamu (*Guest Customer*):**  
-   * *Karakteristik:* Pengguna internet umum yang memiliki tingkat literasi teknologi dasar hingga menengah. Cenderung memiliki rentang perhatian pendek (*short attention span*) sehingga membutuhkan antarmuka yang sangat responsif, navigasi intuitif, dan proses *checkout* yang minimal gesekan (*frictionless*).  
-   * *Fungsi:* Mencari produk, menambah item ke keranjang, mengisi formulir pengiriman, dan melakukan pembayaran.  
-2. **Administrator Basis Data/Teknis (*Technical Admin*):**  
-   * *Karakteristik:* Pengguna dengan literasi perangkat lunak tinggi (berperan sebagai pengelola sementara pada fase MVP).  
-   * *Fungsi:* Memanipulasi *state* pesanan (misal: mengubah status "PAID" menjadi "SHIPPED") dan mengelola ketersediaan stok melalui antarmuka *database client* (misal: pgAdmin/DBeaver) atau melalui manipulasi *endpoint* API secara langsung.
+### 2.2 Karakteristik Pengguna (User Classes)
 
-### **2.3 Batasan Desain & Implementasi (*Design & Implementation Constraints*)**
+Sistem akan diakses oleh dua kelas pengguna utama:
 
-Pengembangan perangkat lunak ini diwajibkan untuk mematuhi batasan arsitektural dan teknis berikut:
+1. **Pelanggan Tamu (Guest Customer):**
+   - _Karakteristik:_ Pengguna internet umum yang memiliki tingkat literasi teknologi dasar hingga menengah. Cenderung memiliki rentang perhatian pendek (_short attention span_) sehingga membutuhkan antarmuka yang responsif, navigasi intuitif, dan proses _checkout_ yang minimal gesekan (_frictionless_).
+   - _Fungsi:_ Mencari produk, menambah item ke keranjang, mengisi formulir pengiriman, dan melakukan pembayaran.
+2. **Administrator Basis Data/Teknis (Technical Admin):**
+   - _Karakteristik:_ Pengguna dengan literasi perangkat lunak tinggi.
+   - _Fungsi:_ Memanipulasi _state_ pesanan (misal: mengubah status "PAID" menjadi "SHIPPED") dan mengelola ketersediaan stok melalui antarmuka _database client_ (misal: pgAdmin/DBeaver) atau melalui manipulasi _endpoint_ API secara langsung.
 
-* **Pemisahan Entitas (Decoupling):** Frontend (Next.js) dan Backend (FastAPI) tidak boleh berada dalam satu wadah proses (*monolith*). Keduanya harus berkomunikasi murni melalui JSON API *payloads*.  
-* **Bahasa Pemrograman:** Lapisan presentasi (Frontend) wajib menggunakan TypeScript untuk *type safety* ketat guna mencegah *runtime error* pada keranjang belanja. Lapisan logika bisnis (Backend) diwajibkan menggunakan Python 3.10+.  
-* **Integritas Relasional:** Data finansial (Pesanan, Item Pesanan, dan Harga Historis) wajib disimpan dalam basis data relasional (PostgreSQL). Penggunaan *NoSQL database* (seperti MongoDB) **dilarang keras** untuk modul transaksional guna mencegah inkonsistensi data pembayaran.  
-* **Lingkungan Kontainer (Containerization):** Seluruh layanan *backend* (API dan Database) harus dikemas menggunakan Docker (*Dockerfile* & *docker-compose.yml*) untuk memastikan konsistensi lingkungan lintas-*server* (dari mesin pengembangan ke produksi).  
-* **Otomatisasi Integrasi (CI/CD):** Dilarang melakukan peluncuran pembaruan langsung ke *server* produksi secara manual. Semua rilis kode harus melewati pengecekan *workflow* di GitHub Actions.
+### 2.3 Batasan Desain & Implementasi (Design & Implementation Constraints)
 
-## **BAB III: KEBUTUHAN FUNGSIONAL**
+- **Pemisahan Entitas (Decoupling):** Frontend (Next.js) dan Backend (FastAPI) tidak boleh berada dalam satu wadah proses (_monolith_). Keduanya harus berkomunikasi murni melalui JSON API _payloads_.
+- **Bahasa Pemrograman:** Lapisan presentasi (Frontend) wajib menggunakan TypeScript untuk _type safety_ ketat. Lapisan logika bisnis (Backend) diwajibkan menggunakan Python 3.10+.
+- **Integritas Relasional:** Data finansial (Pesanan, Item Pesanan, dan Harga Historis) wajib disimpan dalam basis data relasional (PostgreSQL). Penggunaan _NoSQL database_ **dilarang keras** untuk modul transaksional.
+- **Lingkungan Kontainer (Containerization):** Seluruh layanan _backend_ (API dan Database) harus dikemas menggunakan Docker (_Dockerfile_ & _docker-compose.yml_).
+- **Otomatisasi Integrasi (CI/CD):** Semua rilis kode harus melewati pengecekan _workflow_ di GitHub Actions sebelum dideploy.
 
-Kebutuhan fungsional di bawah ini dikelompokkan berdasarkan modul utama perangkat lunak (MVP).
+## BAB III: KEBUTUHAN FUNGSIONAL
 
-### **3.1 Modul Manajemen Katalog (Klien & API)**
+Kebutuhan fungsional dikelompokkan berdasarkan modul utama perangkat lunak.
 
-Fungsi ini menangani visibilitas inventaris toko ke pengguna umum.
+### 3.1 Modul Manajemen Katalog (Klien & API)
 
-* **F-CAT-01: Pengambilan Daftar Produk (Product Listing Retrieval)**  
-  * **Deskripsi:** Sistem (Next.js) harus dapat mengambil dan menampilkan daftar produk secara dinamis dari API dengan mempertimbangkan *pagination*.  
-  * **Input:** Nomor halaman (*page*) atau parameter *limit* (default: 10).  
-  * **Proses:** *Backend* memanggil *query* dari tabel `products` di PostgreSQL, mengurutkan berdasarkan ketersediaan atau tanggal terbaru.  
-  * **Output:** Grid produk di layar klien (Gambar, Nama Produk, Harga).  
-* **F-CAT-02: Pengambilan Detail Produk (Product Detail Fetch)**  
-  * **Deskripsi:** Sistem harus menampilkan data mendalam saat pengguna memilih satu produk spesifik.  
-  * **Input:** ID Produk (`product_id`).  
-  * **Proses:** API melakukan pencarian ke database berdasarkan ID.  
-  * **Output:** Tampilan halaman detail yang memuat Nama Produk, Harga, Deskripsi Lengkap, dan Jumlah Stok tersisa saat ini.
+- **F-CAT-01: Pengambilan Daftar Produk (Product Listing Retrieval)**
+  - **Deskripsi:** Sistem (Next.js) harus dapat mengambil dan menampilkan daftar produk secara dinamis dari API dengan mempertimbangkan _pagination_.
+  - **Proses:** _Backend_ memanggil _query_ dari tabel `products` di PostgreSQL, mengurutkan berdasarkan ketersediaan atau tanggal terbaru.
+  - **Output:** Grid produk di layar klien (Gambar, Nama Produk, Harga).
+- **F-CAT-02: Pengambilan Detail Produk (Product Detail Fetch)**
+  - **Deskripsi:** Sistem harus menampilkan data mendalam saat pengguna memilih satu produk spesifik.
+  - **Output:** Tampilan halaman detail yang memuat Nama Produk, Harga, Deskripsi Lengkap, dan Jumlah Stok tersisa saat ini.
 
-### **3.2 Modul Keranjang Belanja (*Shopping Cart*)**
+### 3.2 Modul Keranjang Belanja (Shopping Cart)
 
-Fungsi ini berjalan secara lokal di sisi klien sebelum sesi *checkout* disahkan.
+- **F-CRT-01: Tambah Item ke Keranjang**
+  - **Deskripsi:** Sistem memungkinkan pengguna memasukkan produk yang dilihat ke dalam sesi keranjang sementara.
+  - **Proses:** Logika frontend (via _Zustand_) memvalidasi apakah kuantitas yang diminta melebihi sisa stok yang ditampilkan.
+- **F-CRT-02: Modifikasi & Penghapusan Item**
+  - **Deskripsi:** Pengguna dapat mengubah jumlah produk yang akan dibeli atau menghapusnya dari daftar.
+  - **Output:** Perhitungan ulang otomatis (_real-time recalculation_) untuk total harga.
 
-* **F-CRT-01: Tambah Item ke Keranjang**  
-  * **Deskripsi:** Sistem memungkinkan pengguna memasukkan produk yang dilihat ke dalam sesi keranjang sementara.  
-  * **Input:** ID Produk dan kuantitas (jumlah).  
-  * **Proses:** Logika frontend (via *Zustand/Redux*) memvalidasi apakah kuantitas yang diminta melebihi sisa stok yang ditampilkan.  
-  * **Output:** *State* keranjang diperbarui; pembaruan ikon keranjang (jumlah item) dan kalkulasi total harga di antarmuka (*UI update*).  
-* **F-CRT-02: Modifikasi & Penghapusan Item**  
-  * **Deskripsi:** Pengguna dapat mengubah jumlah produk yang akan dibeli atau menghapusnya dari daftar.  
-  * **Input:** Perintah 'Ubah Kuantitas' (tambah/kurang) atau 'Hapus' pada item di halaman Cart.  
-  * **Output:** Perhitungan ulang otomatis (*real-time recalculation*) untuk total harga.
+### 3.3 Modul Checkout & Manajemen Pemesanan
 
-### **3.3 Modul Checkout & Manajemen Pemesanan**
+- **F-ORD-01: Pemrosesan Keranjang Tamu (Guest Checkout Processing)**
+  - **Deskripsi:** Sistem meninjau _state_ keranjang dan meminta informasi logistik dari pembeli.
+  - **Proses:** Validasi _regex_ untuk format email dan kelengkapan alamat menggunakan pustaka _Zod_ di frontend sebelum pengiriman data. **[Ditambahkan V1.1.0]** Validasi Zod harus menolak tag HTML untuk mencegah XSS.
+- **F-ORD-02: Inisiasi Transaksi Finansial (Order Initialization)**
+  - **Deskripsi:** _Backend_ menerima permintaan _checkout_, menyimpan pesanan, dan meminta token dari _Payment Gateway_.
+  - **Proses:**
+    1. API (FastAPI) mengunci transaksi dan memverifikasi ulang harga serta ketersediaan stok aktual di PostgreSQL (_Pessimistic Locking_).
+    2. API menyimpan _header_ order dan detail order dengan status `PENDING`.
+    3. API memanggil layanan API pihak ketiga (_Payment Gateway_) untuk mendapatkan URL/Token pembayaran.
+- **F-ORD-03: Webhook Pembayaran & Penguncian Stok (Payment Webhook & Stock Mutation)**
+  - **Deskripsi:** Mekanisme asinkron penerimaan notifikasi konfirmasi bahwa dana pelanggan telah berhasil ditransfer.
+  - **Proses:**
+    1. API memverifikasi keaslian _signature key_ (SHA-512) di dalam _header_.
+    2. API mengubah status pesanan dari `PENDING` menjadi `PAID` di _database_.
+    3. Sistem mengurangi (mutasi) nilai stok fisik barang pada tabel produk.
 
-Fungsi utama interaksi antara antarmuka Next.js dan *endpoint* FastAPI untuk pencatatan transaksi finansial.
+## BAB IV: KEBUTUHAN ANTARMUKA EKSTERNAL
 
-* **F-ORD-01: Pemrosesan Keranjang Tamu (*Guest Checkout Processing*)**  
-  * **Deskripsi:** Sistem meninjau *state* keranjang dan meminta informasi logistik dari pembeli.  
-  * **Input:** Data form pengiriman (Nama, Email, No. HP, Alamat).  
-  * **Proses:** Validasi *regex* untuk format email dan kelengkapan alamat menggunakan pustaka (misal: *Zod*) di frontend sebelum pengiriman data.  
-  * **Output:** Pengiriman (HTTP POST) JSON *Payload* berisi identitas pengiriman dan susunan *Array* keranjang ke *endpoint* API pesanan.  
-* **F-ORD-02: Inisiasi Transaksi Finansial (*Order Initialization*)**  
-  * **Deskripsi:** *Backend* menerima permintaan *checkout*, menyimpan pesanan, dan meminta token dari *Payment Gateway*.  
-  * **Input:** JSON *Payload* dari frontend (F-ORD-01).  
-  * **Proses:**  
-    1. API (FastAPI) mengunci transaksi dan memverifikasi ulang harga serta ketersediaan stok aktual di PostgreSQL.  
-    2. API menyimpan *header* order (Tabel `Orders`) dan detail order (Tabel `Order_Items`) dengan status awal `PENDING`.  
-    3. API memanggil layanan API pihak ketiga (*Payment Gateway*) untuk mendapatkan URL/Token pembayaran.  
-  * **Output:** API mengembalikan URL/Token Pembayaran ke frontend untuk dirender dalam bentuk halaman pembayaran (misal: Midtrans *Snap*).  
-* **F-ORD-03: Webhook Pembayaran & Penguncian Stok (*Payment Webhook & Stock Mutation*)**  
-  * **Deskripsi:** Mekanisme asinkron penerimaan notifikasi konfirmasi bahwa dana pelanggan telah berhasil ditransfer.  
-  * **Input:** Permintaan HTTP POST otomatis dari server *Payment Gateway* ke *endpoint webhook* FastAPI.  
-  * **Proses:**  
-    1. API memverifikasi keaslian *signature key* di dalam *header* untuk keamanan (Anti-Spoofing).  
-    2. API mengubah status pesanan dari `PENDING` menjadi `PAID` di *database*.  
-    3. Sistem mengurangi (mutasi) nilai stok fisik barang pada tabel produk.  
-  * **Output:** Tidak ada output UI (murni *backend*); pengembalian status *HTTP 200 OK* ke server *Payment Gateway*.
+### 4.1 Antarmuka Pengguna (User Interfaces)
 
-## **BAB IV: KEBUTUHAN ANTARMUKA EKSTERNAL**
+Antarmuka pengguna didesain menggunakan paradigma responsif.
 
-Bab ini merinci titik-titik interaksi sistem dengan entitas luar, baik manusia maupun perangkat lunak lain.
+- **Standardisasi Layout & CRO [Diperbarui V1.1.0]:** Aplikasi akan mengadopsi pola _F-Pattern_ untuk katalog.
+- **Skema Warna (Brand Identity) [Ditambahkan V1.1.0]:**
+  - **Warna Primer:** "Tech Violet" (Misal: `Violet-700` atau `#6D28D9`) untuk _Call-to-Action_ (CTA) dan interaksi utama.
+  - **Warna Sekunder/Gradien:** Digunakan secara halus pada spanduk promosi atau tombol kritis (misal: "Bayar dengan Midtrans").
+  - **Tipografi:** Menggunakan _font sans-serif_ modern (Geist/Inter) dengan penekanan hirarki visual (tebal pada harga, redup pada deskripsi).
+- **Umpan Balik Sistem (System Feedback):**
+  - **Micro-interactions [Ditambahkan V1.1.0]:** Tombol CTA harus memiliki efek memuat (_spinner_) dan notifikasi mengambang (_Toast_) saat terjadi mutasi data.
+  - **Breadcrumbs Navigation [Ditambahkan V1.1.0]:** Disediakan navigasi struktural pada halaman detail (`Beranda > Kategori > Nama Produk`).
+  - **State Memuat (Loading):** Menggunakan _Skeleton Loader_.
 
-### **4.1 Antarmuka Pengguna (*User Interfaces*)**
+### 4.2 Antarmuka Perangkat Lunak (Software Interfaces)
 
-Antarmuka pengguna didesain menggunakan paradigma responsif (beradaptasi dari layar seluler hingga *desktop*).
+- **SI-01: Komunikasi Frontend (Next.js) ke Backend API (FastAPI)**
+  - **Protokol:** HTTP/HTTPS menggunakan RESTful Web Services (`application/json`).
+- **SI-02: Koneksi API ke Basis Data (PostgreSQL)**
+  - **Protokol:** TCP/IP pada _port_ 5432.
+- **SI-03: Integrasi API Payment Gateway (Third-Party)**
+  - **Protokol:** HTTPS (wajib TLS enkripsi end-to-end).
 
-* **Standardisasi Layout:** Aplikasi akan mengadopsi pola E-Commerce konvensional untuk mencegah kebingungan kognitif (*cognitive load*):  
-  * *Header* berisi Logo di kiri, bar pencarian di tengah, dan Ikon Keranjang di kanan.  
-  * Katalog ditampilkan dalam format matriks (*grid*).  
-* **Umpan Balik Sistem (*System Feedback*):**  
-  * **State Memuat (*Loading*):** Saat menunggu respons API lambat, layar harus menampilkan elemen visual *Skeleton Loader*, bukan halaman kosong.  
-  * **Interaksi Tombol:** Tombol pemicu mutasi data (misal: tombol "Bayar") wajib berada dalam keadaan nonaktif (*disabled*) selama proses tunggu API untuk mencegah transaksi duplikat akibat pengguna menekan berulang kali (*double-click prevention*).  
-  * **Error Handling UI:** Jika koneksi API gagal, UI akan menampilkan pemberitahuan ramah (*Toast/Snackbar Message*), misal: "Sistem sibuk, silakan coba beberapa saat lagi."
+## BAB V: KEBUTUHAN NON-FUNGSIONAL (NON-FUNCTIONAL REQUIREMENTS)
 
-### **4.2 Antarmuka Perangkat Lunak (*Software Interfaces*)**
+### 5.1 Kinerja & Skalabilitas (Performance & Scalability Requirements)
 
-Definisi cara komponen-komponen sistem "berbicara" satu sama lain dan pihak eksternal:
+- **NF-PER-01: Waktu Muat Awal (Initial Page Load):** Lapisan antarmuka (Next.js) harus mencapai _First Contentful Paint_ (FCP) di bawah 1,5 detik.
+- **NF-PER-02: Waktu Respons API (API Latency):** Rata-rata waktu respons untuk pemanggilan _endpoint_ non-transaksional harus berada di bawah 200 ms.
+- **NF-PER-03: Konkurensi (Concurrency Handling):** _Web server_ FastAPI dan PostgreSQL harus mampu memproses setidaknya 100 RPS.
 
-* **SI-01: Komunikasi Frontend (Next.js) ke Backend API (FastAPI)**  
-  * **Protokol:** HTTP/HTTPS menggunakan RESTful Web Services.  
-  * **Format Data:** Format pertukaran berbasis `application/json`.  
-  * **Arsitektur Autentikasi (Fase Lanjut):** Akses *endpoint* administratif nantinya dikunci dengan protokol otentikasi JWT (*JSON Web Tokens*) melalui *HTTP Header Bearer*.  
-* **SI-02: Koneksi API ke Basis Data (PostgreSQL)**  
-  * **Protokol:** TCP/IP pada *port* standar PostgreSQL (5432) yang diamankan dalam jaringan virtual Docker internal.  
-  * **Interaksi:** Menggunakan koneksi asinkron (misal: *SQLAlchemy Async* atau *SQLModel*) atau pustaka klien ORM (seperti *Prisma* atau *Supabase Client*) tergantung pilihan integrasi BaaS.  
-* **SI-03: Integrasi API Payment Gateway (Third-Party)**  
-  * **Protokol:** HTTPS (wajib TLS enkripsi end-to-end).  
-  * **Mode Interaksi:** Dua arah (Bilateral).  
-    1. API lokal menembak permintaan (*Outbound request*) menggunakan otentikasi *Secret API Key* yang disimpan rapat dalam *Environment Variables* (.env).  
-    2. API lokal memiliki *Webhook Endpoint* publik untuk menerima respons balik (*Inbound callback*) dari penyedia layanan pembayaran.
+### 5.2 Keamanan & Privasi (Security & Privacy Requirements)
 
-## **BAB V: KEBUTUHAN NON-FUNGSIONAL (*NON-FUNCTIONAL REQUIREMENTS*)**
+- **NF-SEC-01: Enkripsi Transportasi Data:** Komunikasi data **wajib** dienkripsi menggunakan HTTPS dengan standar TLS 1.2+.
+- **NF-SEC-02: Perlindungan Injeksi & Serangan Payload [Diperbarui V1.1.0]:**
+  - FastAPI memanfaatkan Pydantic, dan Next.js memanfaatkan Zod untuk validasi ketat guna menolak serangan injeksi SQL dan _Cross-Site Scripting_ (XSS) pada _input form_.
+- **NF-SEC-03: Otentikasi Webhook (Webhook Signature Verification):** _Endpoint webhook_ wajib memverifikasi _hash signature_ HMAC-SHA512 dari Midtrans.
+- **NF-SEC-04: Perlindungan Lintas Situs (CORS Policy) [Diperbarui V1.1.0]:** FastAPI harus membatasi _Cross-Origin Resource Sharing_ (CORS) hanya untuk domain URL _frontend_ Next.js yang sah di tahap produksi (mengganti _wildcard_ `*` dengan URL publik spesifik).
+- **NF-SEC-05: Rate Limiting & DoS Protection [Ditambahkan V1.1.0]:** _Endpoint_ krusial seperti `/checkout` wajib mengimplementasikan _Rate Limiting_ (misal: maks 5 _request_ per menit per IP) di sisi FastAPI untuk mencegah serangan _Brute Force_ dan _Resource Exhaustion_.
 
-Kebutuhan non-fungsional (sering disebut sebagai atribut kualitas sistem atau *ilities*) menetapkan standar kriteria performa, keamanan, dan keandalan operasional sistem.
+### 5.3 Keselamatan & Keandalan (Safety & Reliability Requirements)
 
-### **5.1 Kinerja & Skalabilitas (*Performance & Scalability Requirements*)**
-
-Kinerja mendefinisikan seberapa responsif dan cepat sistem menangani interaksi pengguna dan beban data.
-
-* **NF-PER-01: Waktu Muat Awal (*Initial Page Load*):** Lapisan antarmuka (Next.js) harus mencapai nilai *First Contentful Paint* (FCP) di bawah 1,5 detik pada koneksi 4G standar. Hal ini dicapai dengan strategi *Static Site Generation* (SSG) atau *Server-Side Rendering* (SSR).  
-* **NF-PER-02: Waktu Respons API (*API Latency*):** Rata-rata waktu respons untuk pemanggilan *endpoint* non-transaksional (seperti pencarian produk atau katalog) di FastAPI harus berada di bawah 200 milidetik (*ms*) pada persentil ke-95 (P95).  
-* **NF-PER-03: Konkurensi (*Concurrency Handling*):** *Web server* FastAPI (menggunakan *Uvicorn/Gunicorn* sebagai *ASGI server*) dan PostgreSQL harus mampu memproses setidaknya 100 *requests per second* (RPS) secara bersamaan tanpa mengalami penolakan koneksi (*connection drop*) atau kebocoran memori (*memory leak*).
-
-### **5.2 Keamanan & Privasi (*Security & Privacy Requirements*)**
-
-Sistem berurusan dengan data pribadi dan interaksi finansial, sehingga standar keamanan tidak dapat dikompromikan.
-
-* **NF-SEC-01: Enkripsi Transportasi Data:** Seluruh komunikasi data, baik antara klien dan *server*, maupun antara *server* dan *Payment Gateway*, **wajib** dienkripsi menggunakan protokol HTTPS dengan standar TLS (*Transport Layer Security*) versi 1.2 atau lebih tinggi. Akses HTTP (port 80\) akan otomatis dialihkan secara paksa (*Force Redirect*) ke HTTPS (port 443).  
-* **NF-SEC-02: Perlindungan Injeksi & Serangan *Payload*:**  
-  * FastAPI wajib memanfaatkan Pydantic untuk melakukan validasi tipe data dan skema *payload* secara ketat guna menolak serangan injeksi SQL dan *Cross-Site Scripting* (XSS).  
-  * Setiap input teks bebas (misal: "Catatan Tambahan untuk Kurir") harus dibersihkan (*sanitized*) dari karakter *tag* HTML sebelum dieksekusi atau disimpan ke basis data.  
-* **NF-SEC-03: Otentikasi *Webhook* (*Webhook Signature Verification*):** *Endpoint webhook* tidak boleh menerima *request* sembarangan. Setiap notifikasi keberhasilan pembayaran dari pihak ketiga harus disertai pengecekan kunci kriptografi (*hash signature* HMAC-SHA256) menggunakan *Secret Key* internal perusahaan. Jika *signature* tidak cocok, *request* wajib ditolak dengan kode *401 Unauthorized* atau *403 Forbidden*.  
-* **NF-SEC-04: Perlindungan Lintas Situs (*CORS Policy*):** FastAPI harus membatasi *Cross-Origin Resource Sharing* (CORS) hanya untuk domain URL *frontend* Next.js yang sah. Permintaan API dari *domain* asing tidak akan diproses.
-
-### **5.3 Keselamatan & Keandalan (*Safety & Reliability Requirements*)**
-
-Ketentuan ini mengatur bagaimana perangkat lunak bersikap saat terjadi skenario bencana operasional atau kegagalan perangkat keras.
-
-* **NF-SFT-01: Integritas Transaksional (ACID):** Seluruh operasi yang melibatkan uang dan stok di PostgreSQL harus dibungkus dalam blok SQL *Transaction*. Jika langkah pengurangan stok gagal (misalnya karena *server down* seketika atau kendala konstrain stok), pencatatan status `PAID` harus dibatalkan (*Rollback*) secara serentak untuk mencegah kondisi status pesanan yang anomali.  
-* **NF-SFT-02: Pemulihan Otomatis (*Container Restart Policy*):** Semua *container* Docker (Next.js, FastAPI, PostgreSQL) diatur dengan kebijakan *restart: always* atau *unless-stopped*. Jika aplikasi *crash* akibat kehabisan memori (*OOM Killer*) atau kesalahan kode fatal, *Docker Daemon* akan secara otomatis menyalakan ulang *container* tanpa intervensi manual.  
-* **NF-SFT-03: Perlindungan Degradasi (*Graceful Degradation*):** Jika koneksi *database* terputus sepenuhnya, API harus merespons dengan kode *503 Service Unavailable*, dan aplikasi *frontend* harus merender "Halaman Perbaikan (*Maintenance Page*)" dengan elegan, bukan memberikan tampilan daftar *error* SQL (seperti *stack trace*) yang mengekspos struktur internal server kepada publik.
-
+- **NF-SFT-01: Integritas Transaksional (ACID):** Seluruh operasi di PostgreSQL dibungkus dalam blok SQL _Transaction_ dengan mekanisme _Rollback_ jika terjadi kegagalan sistematis.
+- **NF-SFT-02: Pemulihan Otomatis (Container Restart Policy):** Semua _container_ Docker (Next.js, FastAPI, PostgreSQL) diatur dengan kebijakan _restart: always_ atau _unless-stopped_.
+- **NF-SFT-03: Perlindungan Degradasi (Graceful Degradation):** Jika koneksi _database_ terputus, API merespons dengan kode 503, dan _frontend_ merender "Halaman Perbaikan" (_Maintenance Page_).
