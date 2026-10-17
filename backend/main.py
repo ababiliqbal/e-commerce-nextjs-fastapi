@@ -1,3 +1,4 @@
+import re
 import hashlib
 import os
 import uuid
@@ -62,30 +63,26 @@ def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         content={"detail": "Terlalu banyak permintaan. Silakan coba lagi nanti."},
     )
 
-
 allowed_origins_raw = os.getenv("ALLOWED_ORIGINS", "").strip()
-if allowed_origins_raw:
-    # Membaca daftar origin secara ketat dan mencegah celah wildcard (*)
-    origins = [
-        origin.strip()
-        for origin in allowed_origins_raw.split(",")
-        if origin.strip() and origin.strip() != "*"
-    ]
-else:
-    origins = []
+origins = [
+    origin.strip()
+    for origin in allowed_origins_raw.split(",")
+    if origin.strip() and origin.strip() != "*"
+]
 
-# Jika ALLOWED_ORIGINS kosong atau hanya berisi wildcard, defaultkan hanya ke http://localhost:3000
+# Jika ALLOWED_ORIGINS kosong, defaultkan ke localhost untuk pengembangan lokal
 if not origins:
     origins = ["http://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    # Baris sakti: Mengizinkan otomatis URL dinamis bawaan Vercel (Preview & Production)
+    allow_origin_regex=r"^https://.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 @app.get("/health", status_code=status.HTTP_200_OK)
 def health_check():
