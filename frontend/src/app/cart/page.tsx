@@ -6,31 +6,36 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Loader2 } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { PayButton } from "@/components/PayButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useCartStore } from "@/store/useCartStore";
 import { getClientApiUrl } from "@/lib/api";
+import { toast } from "sonner";
 
 const checkoutSchema = z.object({
   customer_name: z
     .string()
-    .min(3, "Nama lengkap minimal 3 karakter"),
+    .min(3, "Nama lengkap minimal 3 karakter")
+    .regex(/^[^<>]*$/, "Input tidak boleh mengandung karakter tag HTML (< atau >)"),
   customer_email: z
     .string()
     .email("Format email tidak valid"),
   customer_phone: z
     .string()
     .min(10, "Nomor telepon minimal 10 digit angka")
+    .regex(/^[^<>]*$/, "Input tidak boleh mengandung karakter tag HTML (< atau >)")
     .regex(/^\d+$/, "Nomor telepon hanya boleh berisi angka"),
   shipping_address: z
     .string()
-    .min(10, "Alamat pengiriman minimal 10 karakter"),
+    .min(10, "Alamat pengiriman minimal 10 karakter")
+    .regex(/^[^<>]*$/, "Input tidak boleh mengandung karakter tag HTML (< atau >)"),
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
@@ -59,6 +64,7 @@ export default function CartPage() {
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -150,6 +156,7 @@ export default function CartPage() {
           // fallback default detail
         }
         setErrorMessage(detail);
+        toast.error(detail);
         setIsSubmitting(false);
         return;
       }
@@ -160,9 +167,10 @@ export default function CartPage() {
       router.push(`/order-success/${orderData.id}`);
     } catch (err) {
       console.error("Gagal melakukan checkout:", err);
-      setErrorMessage(
-        "Gagal terhubung ke server backend. Pastikan server berjalan di port 8000."
-      );
+      const errMsg =
+        "Gagal terhubung ke server backend. Pastikan server berjalan di port 8000.";
+      setErrorMessage(errMsg);
+      toast.error(errMsg);
       setIsSubmitting(false);
     }
   };
@@ -304,6 +312,7 @@ export default function CartPage() {
                         id="customer_name"
                         placeholder="Contoh: Budi Santoso"
                         disabled={isSubmitting}
+                        aria-invalid={!!errors.customer_name}
                         {...register("customer_name")}
                       />
                       {errors.customer_name && (
@@ -320,6 +329,7 @@ export default function CartPage() {
                         type="email"
                         placeholder="Contoh: budi@example.com"
                         disabled={isSubmitting}
+                        aria-invalid={!!errors.customer_email}
                         {...register("customer_email")}
                       />
                       {errors.customer_email && (
@@ -336,6 +346,7 @@ export default function CartPage() {
                         type="tel"
                         placeholder="Contoh: 081234567890"
                         disabled={isSubmitting}
+                        aria-invalid={!!errors.customer_phone}
                         {...register("customer_phone")}
                       />
                       {errors.customer_phone && (
@@ -352,6 +363,7 @@ export default function CartPage() {
                         placeholder="Masukkan alamat lengkap pengiriman beserta kode pos"
                         rows={3}
                         disabled={isSubmitting}
+                        aria-invalid={!!errors.shipping_address}
                         {...register("shipping_address")}
                       />
                       {errors.shipping_address && (
@@ -368,21 +380,18 @@ export default function CartPage() {
                       </div>
                     )}
 
-                    <Button
+                    <PayButton
                       type="submit"
-                      className="w-full cursor-pointer text-base font-semibold"
-                      size="lg"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                      isLoading={isSubmitting}
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Memproses...
-                        </>
+                        "Menyiapkan Pembayaran Midtrans..."
                       ) : (
                         `Bayar ${formatPrice(totalPrice)}`
                       )}
-                    </Button>
+                    </PayButton>
                   </form>
                 </CardContent>
               </Card>

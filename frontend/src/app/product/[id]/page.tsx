@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
@@ -76,16 +76,32 @@ export default async function ProductDetailPage({
 
       <main className="flex-1">
         <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {/* Tombol Kembali */}
-          <div className="mb-6">
+          {/* Navigasi Struktural Breadcrumbs */}
+          <nav
+            aria-label="Breadcrumb"
+            className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+          >
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex items-center gap-1 font-medium transition-colors hover:text-foreground"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Kembali
+              Beranda
             </Link>
-          </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" aria-hidden="true" />
+            <Link
+              href="/"
+              className="font-medium transition-colors hover:text-foreground"
+            >
+              Katalog
+            </Link>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" aria-hidden="true" />
+            <span
+              className="font-semibold text-foreground truncate max-w-[200px] sm:max-w-md"
+              aria-current="page"
+            >
+              {product.name}
+            </span>
+          </nav>
 
           {/* Layout Split: 2 Kolom di md ke atas, 1 Kolom di mobile */}
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:gap-12">

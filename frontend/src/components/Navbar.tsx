@@ -12,6 +12,7 @@ export function Navbar() {
   const lastOrderId = useCartStore((state) => state.lastOrderId);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -19,7 +20,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 group">
-          <span className="text-xl font-bold tracking-tight text-foreground transition-colors group-hover:text-primary">
+          <span className="text-primary font-black text-2xl tracking-tight">
             Amba Shop
           </span>
         </Link>
@@ -30,7 +31,7 @@ export function Navbar() {
               asChild
               variant="outline"
               size="sm"
-              className="cursor-pointer gap-2 transition-transform active:scale-95 text-xs sm:text-sm font-medium"
+              className="cursor-pointer gap-2 transition-transform active:scale-95 text-xs sm:text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors"
             >
               <Link href={`/order-success/${lastOrderId}`}>
                 <Receipt className="h-4 w-4" />
@@ -43,7 +44,7 @@ export function Navbar() {
             asChild
             variant="outline"
             size="icon"
-            className="relative cursor-pointer transition-transform active:scale-95"
+            className="relative cursor-pointer transition-transform active:scale-95 hover:bg-primary/10 hover:text-primary transition-colors"
             aria-label="Shopping Cart"
           >
             <Link href="/cart">
