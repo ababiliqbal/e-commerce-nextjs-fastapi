@@ -7,7 +7,28 @@ if str(backend_dir) not in sys.path:
     sys.path.append(str(backend_dir))
 
 from database import Base, SessionLocal, engine
-from models import Product
+from models import AuthProvider, Product, ProductImage, User, UserRole
+
+MOCK_USERS = [
+    {
+        "id": uuid.UUID("11111111-1111-4111-a111-111111111111"),
+        "email": "admin@ambashop.com",
+        "full_name": "Admin AmbaShop",
+        "password_hash": "$2b$12$mockhashforadminambashoppassword1234567890",
+        "auth_provider": AuthProvider.LOCAL.value,
+        "role": UserRole.ADMIN.value,
+        "is_active": True,
+    },
+    {
+        "id": uuid.UUID("22222222-2222-4222-a222-222222222222"),
+        "email": "customer@ambashop.com",
+        "full_name": "Customer AmbaShop",
+        "password_hash": "$2b$12$mockhashforcustomerambashoppassword123456",
+        "auth_provider": AuthProvider.LOCAL.value,
+        "role": UserRole.CUSTOMER.value,
+        "is_active": True,
+    },
+]
 
 MOCK_PRODUCTS = [
     {
@@ -16,6 +37,18 @@ MOCK_PRODUCTS = [
         "description": "Keyboard mekanikal nirkabel dengan switch taktil responsif, lampu latar RGB dinamis, dan konektivitas Bluetooth multi-device.",
         "price": 850000,
         "stock_quantity": 10,
+        "images": [
+            {
+                "image_url": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=800&q=80",
+                "is_primary": True,
+                "display_order": 0,
+            },
+            {
+                "image_url": "https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=800&q=80",
+                "is_primary": False,
+                "display_order": 1,
+            },
+        ],
     },
     {
         "id": uuid.UUID("b2c1d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e"),
@@ -23,6 +56,18 @@ MOCK_PRODUCTS = [
         "description": "Headphone over-ear nirkabel dengan active noise cancellation (ANC) premium, audio resolusi tinggi, dan baterai hingga 30 jam.",
         "price": 12500,
         "stock_quantity": 5,
+        "images": [
+            {
+                "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80",
+                "is_primary": True,
+                "display_order": 0,
+            },
+            {
+                "image_url": "https://images.unsplash.com/photo-1484704849700-f032a568e944?auto=format&fit=crop&w=800&q=80",
+                "is_primary": False,
+                "display_order": 1,
+            },
+        ],
     },
     {
         "id": uuid.UUID("c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f"),
@@ -30,6 +75,18 @@ MOCK_PRODUCTS = [
         "description": "Alas meja kerja kulit sintetis premium tahan air dan goresan untuk kenyamanan mengetik serta pergerakan mouse yang presisi.",
         "price": 17500,
         "stock_quantity": 15,
+        "images": [
+            {
+                "image_url": "https://images.unsplash.com/photo-1616401784845-180882ba9ba8?auto=format&fit=crop&w=800&q=80",
+                "is_primary": True,
+                "display_order": 0,
+            },
+            {
+                "image_url": "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=800&q=80",
+                "is_primary": False,
+                "display_order": 1,
+            },
+        ],
     },
     {
         "id": uuid.UUID("d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a"),
@@ -37,6 +94,18 @@ MOCK_PRODUCTS = [
         "description": "Jam tangan pintar dengan sensor pemantau detak jantung, pelacak kualitas tidur, GPS akurat, dan ketahanan air hingga 50 meter.",
         "price": 5000,
         "stock_quantity": 20,
+        "images": [
+            {
+                "image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80",
+                "is_primary": True,
+                "display_order": 0,
+            },
+            {
+                "image_url": "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=800&q=80",
+                "is_primary": False,
+                "display_order": 1,
+            },
+        ],
     },
     {
         "id": uuid.UUID("e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b"),
@@ -44,30 +113,92 @@ MOCK_PRODUCTS = [
         "description": "Speaker portabel tahan air bersertifikasi IPX7 dengan dentuman bass mendalam dan daya tahan baterai 12 jam pemutaran nonstop.",
         "price": 4500,
         "stock_quantity": 17,
+        "images": [
+            {
+                "image_url": "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=800&q=80",
+                "is_primary": True,
+                "display_order": 0,
+            },
+            {
+                "image_url": "https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=800&q=80",
+                "is_primary": False,
+                "display_order": 1,
+            },
+        ],
     },
 ]
 
 
-def seed_products():
+def seed_users(db):
+    added_users = 0
+    for u_data in MOCK_USERS:
+        existing = db.query(User).filter(User.email == u_data["email"]).first()
+        if not existing:
+            user = User(
+                id=u_data["id"],
+                email=u_data["email"],
+                full_name=u_data["full_name"],
+                password_hash=u_data["password_hash"],
+                auth_provider=u_data["auth_provider"],
+                role=u_data["role"],
+                is_active=u_data["is_active"],
+            )
+            db.add(user)
+            added_users += 1
+
+    if added_users > 0:
+        db.commit()
+        print(f"Berhasil menambahkan {added_users} pengguna (Admin/Customer) ke database.")
+    else:
+        print("Data pengguna (Admin/Customer) sudah ada. Seeding pengguna dilewati.")
+
+
+def seed_products(db):
+    added_products = 0
+    added_images = 0
+
+    for item in MOCK_PRODUCTS:
+        product = db.query(Product).filter(Product.id == item["id"]).first()
+        if not product:
+            product = Product(
+                id=item["id"],
+                name=item["name"],
+                description=item["description"],
+                price=item["price"],
+                stock_quantity=item["stock_quantity"],
+            )
+            db.add(product)
+            db.flush()
+            added_products += 1
+
+        # Cek apakah produk sudah memiliki gambar di tabel product_images
+        images_count = db.query(ProductImage).filter(ProductImage.product_id == item["id"]).count()
+        if images_count == 0:
+            for img_data in item.get("images", []):
+                prod_image = ProductImage(
+                    product_id=item["id"],
+                    image_url=img_data["image_url"],
+                    is_primary=img_data["is_primary"],
+                    display_order=img_data["display_order"],
+                )
+                db.add(prod_image)
+                added_images += 1
+
+    if added_products > 0 or added_images > 0:
+        db.commit()
+        print(f"Berhasil menambahkan {added_products} produk dan {added_images} gambar produk ke database.")
+    else:
+        print("Tabel products dan product_images sudah memiliki data lengkap. Seeding produk dilewati.")
+
+
+def seed_all():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        count = db.query(Product).count()
-        if count == 0:
-            print("Tabel products kosong. Menambahkan data seed...")
-            for item in MOCK_PRODUCTS:
-                product = Product(
-                    id=item["id"],
-                    name=item["name"],
-                    description=item["description"],
-                    price=item["price"],
-                    stock_quantity=item["stock_quantity"],
-                )
-                db.add(product)
-            db.commit()
-            print(f"Berhasil menambahkan {len(MOCK_PRODUCTS)} produk ke database.")
-        else:
-            print(f"Tabel products sudah memiliki {count} data. Seeding dilewati.")
+        print("Memulai proses seeding database...")
+        seed_users(db)
+        seed_products(db)
+        print("Proses seeding selesai dengan sukses.")
     except Exception as e:
         db.rollback()
         print(f"Error saat seeding data: {e}")
@@ -77,4 +208,4 @@ def seed_products():
 
 
 if __name__ == "__main__":
-    seed_products()
+    seed_all()
