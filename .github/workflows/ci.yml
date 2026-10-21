@@ -71,4 +71,5 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: "http://localhost:8000"
           NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: "SB-Mid-client-dummy-ci"
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: "dummy-client-id-ci.apps.googleusercontent.com"
         run: npm run build

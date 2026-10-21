@@ -11,7 +11,7 @@ import httpx
 from sqlalchemy.orm import Session, selectinload
 
 from database import get_db
-from models import Order, OrderItem, OrderStatus, Product, User
+from models import Order, OrderItem, OrderStatus, Product, User, UserRole
 from schemas import CheckoutRequest, OrderResponse
 from security import get_current_user, get_optional_user
 
@@ -202,9 +202,14 @@ def get_my_orders(
     response_model=OrderResponse,
     status_code=status.HTTP_200_OK,
 )
-def get_order(order_id: UUID, db: Session = Depends(get_db)):
+def get_order(
+    order_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_user),
+):
     """
     Mengambil rincian pesanan spesifik berdasarkan ID pesanan (UUID).
+    Mencegah kebocoran data jika pesanan dibuat oleh akun terdaftar (member).
     """
     order = (
         db.query(Order)
@@ -217,4 +222,18 @@ def get_order(order_id: UUID, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Pesanan dengan ID {order_id} tidak ditemukan",
         )
+
+    # Proteksi Kepemilikan: Jika pesanan dibuat oleh akun terdaftar / Member
+    if order.user_id is not None:
+        if (
+            current_user is not None
+            and order.user_id != current_user.id
+            and current_user.role != "ADMIN"
+            and current_user.role != UserRole.ADMIN
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Akses ditolak: Pesanan ini milik akun pengguna lain.",
+            )
+
     return order

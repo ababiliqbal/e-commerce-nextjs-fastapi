@@ -221,7 +221,12 @@ export default function CartPage() {
       }
 
       const orderData = await res.json();
-      setLastOrderId(orderData.id);
+      // Hanya simpan lastOrderId untuk transaksi Guest pada sesi saat ini
+      if (!user) {
+        setLastOrderId(orderData.id);
+      } else {
+        setLastOrderId(null);
+      }
 
       // Otomatis simpan profil pengiriman ke useAuthStore untuk transaksi berikutnya jika user login
       if (user) {
@@ -229,7 +234,7 @@ export default function CartPage() {
       }
 
       clearCart();
-      router.push(`/order-success/${orderData.id}`);
+      router.push(`/orders/${orderData.id}`);
     } catch (err) {
       console.error("Gagal melakukan checkout:", err);
       const errMsg =

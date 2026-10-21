@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useCartStore } from './useCartStore';
 
 export type UserRole = 'CUSTOMER' | 'ADMIN';
 export type AuthProvider = 'LOCAL' | 'GOOGLE';
@@ -39,6 +40,12 @@ export const useAuthStore = create<AuthState>()(
 
       setAuth: (user: User, accessToken: string) => {
         set({ user, accessToken });
+        // Bersihkan state lastOrderId milik sesi sebelumnya agar tidak bocor lintas akun
+        useCartStore.getState().setLastOrderId(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('last_order_id');
+          localStorage.removeItem('lastOrderId');
+        }
       },
 
       setAccessToken: (accessToken: string | null) => {
@@ -47,6 +54,12 @@ export const useAuthStore = create<AuthState>()(
 
       clearAuth: () => {
         set({ user: null, accessToken: null });
+        // Bersihkan state lastOrderId milik sesi sebelumnya saat logout
+        useCartStore.getState().setLastOrderId(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('last_order_id');
+          localStorage.removeItem('lastOrderId');
+        }
       },
 
       saveShippingProfile: (userId: string, phone: string, address: string) => {

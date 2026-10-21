@@ -383,7 +383,7 @@ export default function OrderHistoryPage() {
                           size="sm"
                           className="rounded-xl h-9 text-xs font-semibold hover:bg-violet-700/10 hover:text-violet-700 transition-colors cursor-pointer"
                         >
-                          <Link href={`/order-success/${order.id}`}>
+                          <Link href={`/orders/${order.id}`}>
                             <span>Detail Pesanan</span>
                             <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
                           </Link>

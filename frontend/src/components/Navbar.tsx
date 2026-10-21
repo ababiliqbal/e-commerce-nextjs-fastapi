@@ -105,19 +105,33 @@ export function Navbar() {
 
           {/* Sisi Kanan: Action Buttons & Auth */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Tombol Cek Pesanan Terakhir */}
-            {mounted && lastOrderId && (
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="hidden md:inline-flex cursor-pointer gap-2 text-xs sm:text-sm font-medium hover:bg-violet-700/10 hover:text-violet-700 transition-colors rounded-xl"
-              >
-                <Link href={`/order-success/${lastOrderId}`}>
-                  <Receipt className="h-4 w-4" />
-                  <span>Cek Pesanan</span>
-                </Link>
-              </Button>
+            {/* Tombol Cek Pesanan (Cerdas: /orders/history jika Login, /order-success/{id} jika Guest) */}
+            {mounted && (
+              user ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="hidden md:inline-flex cursor-pointer gap-2 text-xs sm:text-sm font-medium hover:bg-violet-700/10 hover:text-violet-700 transition-colors rounded-xl"
+                >
+                  <Link href="/orders/history">
+                    <Receipt className="h-4 w-4" />
+                    <span>Cek Pesanan</span>
+                  </Link>
+                </Button>
+              ) : lastOrderId ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="hidden md:inline-flex cursor-pointer gap-2 text-xs sm:text-sm font-medium hover:bg-violet-700/10 hover:text-violet-700 transition-colors rounded-xl"
+                >
+                  <Link href={`/order-success/${lastOrderId}`}>
+                    <Receipt className="h-4 w-4" />
+                    <span>Cek Pesanan</span>
+                  </Link>
+                </Button>
+              ) : null
             )}
 
             {/* Tombol Keranjang Belanja */}
