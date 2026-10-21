@@ -13,6 +13,7 @@ export interface Product {
   description: string;
   price: number;
   stock_quantity: number;
+  is_active?: boolean;
   image_url?: string;
   images?: {
     id: string;
@@ -21,6 +22,41 @@ export interface Product {
     display_order: number;
   }[];
   created_at?: string;
+}
+
+export interface OrdersByStatus {
+  PENDING: number;
+  PAID: number;
+  SHIPPED: number;
+  COMPLETED: number;
+  CANCELLED: number;
+  [key: string]: number;
+}
+
+export interface LowStockProduct {
+  id: string;
+  name: string;
+  stock_quantity: number;
+  price: number;
+  image_url: string | null;
+}
+
+export interface TopSellingProduct {
+  product_id: string;
+  name: string;
+  total_sold: number;
+  total_revenue: number;
+}
+
+export interface AdminAnalyticsResponse {
+  total_revenue: number;
+  total_orders: number;
+  orders_by_status: OrdersByStatus;
+  conversion_rate: number;
+  active_products_count: number;
+  archived_products_count: number;
+  low_stock_products: LowStockProduct[];
+  top_selling_products: TopSellingProduct[];
 }
 
 export const FALLBACK_PRODUCT_IMAGE =
@@ -267,5 +303,46 @@ export const apiClient = {
   delete: (endpoint: string, init?: RequestInit) =>
     apiFetch(endpoint, { ...init, method: "DELETE" }),
 };
+
+/**
+ * Mengambil ringkasan analitik eksekutif untuk Dashboard Admin
+ * dari endpoint GET /api/v1/admin/analytics/summary menggunakan fetch berautentikasi.
+ * Melempar error dengan pesan deskriptif jika server merespons 401 atau 403.
+ */
+export async function fetchAdminAnalytics(): Promise<AdminAnalyticsResponse> {
+  const response = await apiFetch("/api/v1/admin/analytics/summary", {
+    method: "GET",
+  });
+
+  if (response.status === 401) {
+    throw new Error(
+      "Sesi autentikasi telah berakhir atau Anda belum terautentikasi (401 Unauthorized)."
+    );
+  }
+
+  if (response.status === 403) {
+    throw new Error(
+      "Akses ditolak: Anda tidak memiliki wewenang administrator (403 Forbidden)."
+    );
+  }
+
+  if (!response.ok) {
+    let errorMessage = `Gagal memuat analitik admin (${response.status} ${response.statusText})`;
+    try {
+      const errData = await response.json();
+      if (errData?.detail) {
+        errorMessage =
+          typeof errData.detail === "string"
+            ? errData.detail
+            : JSON.stringify(errData.detail);
+      }
+    } catch {
+      // Abaikan jika respons bukan JSON
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
 
 export default apiFetch;
