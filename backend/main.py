@@ -1,12 +1,17 @@
 import re
 import hashlib
 import os
+import sys
 import uuid
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from pathlib import Path
 from typing import List
 from uuid import UUID
+
+current_dir = Path(__file__).resolve().parent
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
 
 from dotenv import load_dotenv
 import httpx
