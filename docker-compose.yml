@@ -27,6 +27,8 @@ services:
       - ./backend/.env
     environment:
       DATABASE_URL: postgresql://admin:rahasia@postgres:5432/ecommerce_db
+    volumes:
+      - ./backend:/app
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,6 +39,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8000
         NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: ${NEXT_PUBLIC_MIDTRANS_CLIENT_KEY:-Mid-client-M4BsTcoqyn2rkvrL}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-293601975323-mcf0osqa7gt318a0qcg86for107vip2b.apps.googleusercontent.com}
     container_name: ecommerce_frontend
     restart: unless-stopped
     ports:
@@ -44,6 +47,7 @@ services:
     environment:
       INTERNAL_API_URL: http://backend:8000
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-293601975323-mcf0osqa7gt318a0qcg86for107vip2b.apps.googleusercontent.com}
     depends_on:
       - backend
 

@@ -16,7 +16,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useCartStore } from "@/store/useCartStore";
-import { getClientApiUrl } from "@/lib/api";
+import { useAuthStore } from "@/store/useAuthStore";
+import { apiFetch } from "@/lib/api";
+import { getPrimaryProductImage } from "@/types/product";
 import { toast } from "sonner";
 
 const checkoutSchema = z.object({
@@ -48,10 +50,12 @@ export default function CartPage() {
 
   const { items, updateQuantity, removeItem, clearCart, getTotalPrice, setLastOrderId } =
     useCartStore();
+  const { user, accessToken, getShippingProfile, saveShippingProfile } = useAuthStore();
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
@@ -67,6 +71,61 @@ export default function CartPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
+
+  // Smart Auto-Fill: Isi otomatis dari profil pengguna atau pesanan terakhir
+  useEffect(() => {
+    let isSubscribed = true;
+
+    async function autoFillUserData() {
+      if (!user) return;
+
+      const profile = getShippingProfile(user.id);
+      let phone = profile?.customer_phone || "";
+      let address = profile?.shipping_address || "";
+
+      // Jika di store belum ada nomor HP atau alamat, coba ambil dari pesanan terakhir via GET /api/v1/orders/me
+      if ((!phone || !address) && accessToken) {
+        try {
+          const res = await apiFetch("/api/v1/orders/me");
+          if (res.ok) {
+            const myOrders = await res.json();
+            if (Array.isArray(myOrders) && myOrders.length > 0) {
+              const latestOrder = myOrders[0];
+              if (!phone && latestOrder.customer_phone) {
+                phone = latestOrder.customer_phone;
+              }
+              if (!address && latestOrder.shipping_address) {
+                address = latestOrder.shipping_address;
+              }
+              // Simpan data dari pesanan terakhir ke store
+              if (phone && address) {
+                saveShippingProfile(user.id, phone, address);
+              }
+            }
+          }
+        } catch {
+          // Abaikan jika gagal mengambil histori pesanan
+        }
+      }
+
+      if (isSubscribed) {
+        reset({
+          customer_name: user.full_name || "",
+          customer_email: user.email || "",
+          customer_phone: phone,
+          shipping_address: address,
+        });
+      }
+    }
+
+    autoFillUserData();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [user, accessToken, getShippingProfile, saveShippingProfile, reset]);
+
+
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -133,14 +192,14 @@ export default function CartPage() {
         })),
       };
 
-      const apiUrl = getClientApiUrl();
-      const res = await fetch(`${apiUrl}/api/v1/orders/checkout`, {
+      const res = await apiFetch("/api/v1/orders/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
+
 
       if (!res.ok) {
         let detail = "Terjadi kesalahan saat memproses pesanan";
@@ -163,6 +222,12 @@ export default function CartPage() {
 
       const orderData = await res.json();
       setLastOrderId(orderData.id);
+
+      // Otomatis simpan profil pengiriman ke useAuthStore untuk transaksi berikutnya jika user login
+      if (user) {
+        saveShippingProfile(user.id, data.customer_phone, data.shipping_address);
+      }
+
       clearCart();
       router.push(`/order-success/${orderData.id}`);
     } catch (err) {
@@ -209,10 +274,7 @@ export default function CartPage() {
                       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={
-                            item.image_url ||
-                            "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"
-                          }
+                          src={getPrimaryProductImage(item)}
                           alt={item.name}
                           className="h-full w-full object-cover"
                         />

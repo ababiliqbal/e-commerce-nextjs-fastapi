@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Product } from '@/types/product';
+import { Product, getPrimaryProductImage } from '@/types/product';
 
 export interface CartItem extends Product {
   quantity: number;
@@ -31,6 +31,9 @@ export const useCartStore = create<CartStore>()(
       addItem: (product: Product, quantity = 1) => {
         if (quantity <= 0) return;
 
+        const primaryImage = getPrimaryProductImage(product);
+        const productImages = product.images || [];
+
         set((state) => {
           const existingItem = state.items.find((item) => item.id === product.id);
 
@@ -40,6 +43,8 @@ export const useCartStore = create<CartStore>()(
                 item.id === product.id
                   ? {
                       ...item,
+                      image_url: primaryImage,
+                      images: productImages.length > 0 ? productImages : item.images,
                       quantity: Math.min(
                         item.quantity + quantity,
                         product.stock_quantity
@@ -56,6 +61,8 @@ export const useCartStore = create<CartStore>()(
                 ...state.items,
                 {
                   ...product,
+                  image_url: primaryImage,
+                  images: productImages,
                   quantity: Math.min(quantity, product.stock_quantity),
                 },
               ],

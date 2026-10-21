@@ -42,7 +42,7 @@ export const mockProducts: Product[] = [
     price: 620000,
     stock_quantity: 30,
     image_url:
-      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?auto=format&fit=crop&w=1000&q=80",
     created_at: "2026-03-04T14:45:00Z",
   },
   {

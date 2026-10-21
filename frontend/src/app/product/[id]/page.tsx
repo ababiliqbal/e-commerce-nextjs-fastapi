@@ -5,7 +5,8 @@ import { Footer } from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AddToCartButton } from "@/components/AddToCartButton";
-import { Product } from "@/types/product";
+import { ProductImageGallery } from "@/components/ProductImageGallery";
+import { Product, ProductImage, getPrimaryProductImage } from "@/types/product";
 import { getServerApiUrl } from "@/lib/api";
 
 interface ProductDetailPageProps {
@@ -20,22 +21,31 @@ export default async function ProductDetailPage({
   const resolvedParams = await params;
   const id = resolvedParams.id;
 
-  let products: Product[] = [];
+  let product: Product | null = null;
 
   try {
     const apiUrl = getServerApiUrl();
-    const res = await fetch(`${apiUrl}/api/v1/products`, {
+
+    // Coba ambil detail produk spesifik (dengan eager-loaded images)
+    const singleRes = await fetch(`${apiUrl}/api/v1/products/${id}`, {
       cache: "no-store",
     });
 
-    if (res.ok) {
-      products = await res.json();
+    if (singleRes.ok) {
+      product = await singleRes.json();
+    } else {
+      // Fallback: ambil semua produk lalu cari berdasarkan id
+      const allRes = await fetch(`${apiUrl}/api/v1/products`, {
+        cache: "no-store",
+      });
+      if (allRes.ok) {
+        const products: Product[] = await allRes.json();
+        product = products.find((p) => p.id === id) || null;
+      }
     }
   } catch (error) {
     console.error("Gagal mengambil data produk:", error);
   }
-
-  const product = products.find((p) => p.id === id);
 
   if (!product) {
     return (
@@ -69,6 +79,24 @@ export default async function ProductDetailPage({
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(product.price);
+
+  // Urutkan product.images dengan memprioritaskan is_primary lalu display_order ascending.
+  // Jika product.images kosong, buat array 1 elemen dari [getPrimaryProductImage(product)].
+  const galleryImages: ProductImage[] =
+    product.images && product.images.length > 0
+      ? [...product.images].sort((a, b) => {
+          if (a.is_primary && !b.is_primary) return -1;
+          if (!a.is_primary && b.is_primary) return 1;
+          return (a.display_order ?? 0) - (b.display_order ?? 0);
+        })
+      : [
+          {
+            id: `primary-${product.id}`,
+            image_url: getPrimaryProductImage(product),
+            is_primary: true,
+            display_order: 0,
+          },
+        ];
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -105,19 +133,13 @@ export default async function ProductDetailPage({
 
           {/* Layout Split: 2 Kolom di md ke atas, 1 Kolom di mobile */}
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:gap-12">
-            {/* Kolom Kiri: Gambar Produk */}
-            <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted">
-              <div className="aspect-square w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={
-                    product.image_url ||
-                    "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"
-                  }
-                  alt={product.name}
-                  className="h-full w-full object-cover"
-                />
-              </div>
+            {/* Kolom Kiri: Galeri Gambar Interaktif */}
+            <div>
+              <ProductImageGallery
+                images={galleryImages}
+                fallbackImageUrl={product.image_url}
+                productName={product.name}
+              />
             </div>
 
             {/* Kolom Kanan: Detail Informasi Produk */}
@@ -141,7 +163,7 @@ export default async function ProductDetailPage({
                   </h1>
                 </div>
 
-                <div className="text-2xl font-bold text-primary sm:text-3xl">
+                <div className="text-2xl font-bold text-violet-700 dark:text-violet-400 sm:text-3xl">
                   {formattedPrice}
                 </div>
 
