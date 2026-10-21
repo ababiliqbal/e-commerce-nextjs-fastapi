@@ -8,11 +8,11 @@
 | :---- | :---------- | :-------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------ |
 | 1.0.0 | 12 Okt 2026 | M. Iqbal Ababil | Inisialisasi MVP, Arsitektur Database, Integrasi Midtrans.                                                                                                              | Dirilis |
 | 1.1.0 | 16 Okt 2026 | M. Iqbal Ababil | Refactoring UI/UX (CRO Pattern, Brand Color 'Tech Violet'), Security Audit (CORS Regex, Rate Limiting, XSS Validation).                                                 | Dirilis |
-| 1.2.0 | 19 Okt 2026 | M. Iqbal Ababil | DRAF: Desain Arsitektur IAM (JWT Dual-Token, Argon2/Bcrypt, Google OIDC), Skema Fisik `users` & `product_images`, Migrasi Alembic, dan Algoritma Eager Loading (`1:N`). | Draf    |
+| 1.2.0 | 19 Okt 2026 | M. Iqbal Ababil | DRAF: Desain Arsitektur IAM (JWT Dual-Token, Argon2/Bcrypt, Google OIDC), Skema Fisik `users` & `product_images`, Migrasi Alembic, dan Algoritma Eager Loading (`1:N`). | Dirilis |
 | 1.3.0 | TBA         | M. Iqbal Ababil | RENCANA: Desain Arsitektur CMS Internal (Admin Dashboard), RBAC Guard Endpoints, & Integrasi S3/Supabase Object Storage.                                                | Rencana |
 | 2.0.0 | TBA         | M. Iqbal Ababil | RENCANA: Modul Integrasi Eksternal (API Logistik 3PL), Ongkos Kirim Dinamis & Order State Machine V2.                                                                   | Rencana |
 
-**Versi:** 1.2.0 **Status:** Draf
+**Versi:** 1.2.0 **Status:** Dirilis
 
 ## BAB 1: DESAIN ARSITEKTURAL (SYSTEM ARCHITECTURE)
 
