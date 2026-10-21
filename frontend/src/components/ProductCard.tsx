@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { Product } from "@/types/product";
+import { Product, getPrimaryProductImage } from "@/types/product";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -15,6 +15,8 @@ export function ProductCard({ product }: ProductCardProps) {
     maximumFractionDigits: 0,
   }).format(product.price);
 
+  const primaryImage = getPrimaryProductImage(product);
+
   return (
     <Link className="group block h-full" href={`/product/${product.id}`}>
       <Card className="flex h-full flex-col justify-between overflow-hidden rounded-xl border border-border/60 bg-card p-0 shadow-xs transition-all duration-300 hover:shadow-xl hover:border-primary/60 hover:-translate-y-1">
@@ -23,10 +25,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <div className="relative aspect-square w-full overflow-hidden bg-muted">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={
-                product.image_url ||
-                "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80"
-              }
+              src={primaryImage}
               alt={product.name}
               className="h-full w-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
               loading="lazy"
