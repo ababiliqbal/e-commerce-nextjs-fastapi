@@ -22,6 +22,7 @@ def get_products(db: Session = Depends(get_db)):
     products = (
         db.query(Product)
         .options(selectinload(Product.images))
+        .filter(Product.is_active == True)
         .order_by(Product.created_at.desc())
         .all()
     )
@@ -32,12 +33,12 @@ def get_products(db: Session = Depends(get_db)):
 def get_product(id: UUID, db: Session = Depends(get_db)):
     """
     Mengambil detail produk spesifik berdasarkan UUID beserta galeri gambarnya
-    menggunakan Eager Loading (selectinload).
+    menggunakan Eager Loading (selectinload). Hanya menampilkan produk yang aktif.
     """
     product = (
         db.query(Product)
         .options(selectinload(Product.images))
-        .filter(Product.id == id)
+        .filter(Product.id == id, Product.is_active == True)
         .first()
     )
     if not product:

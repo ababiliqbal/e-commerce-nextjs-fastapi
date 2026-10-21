@@ -12,6 +12,7 @@ from sqlalchemy import (
     Text,
     UUID,
     func,
+    text,
 )
 from sqlalchemy.orm import relationship
 
@@ -24,6 +25,7 @@ class OrderStatus(str, enum.Enum):
     PROCESSING = "PROCESSING"
     SHIPPED = "SHIPPED"
     DELIVERED = "DELIVERED"
+    COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
     FAILED = "FAILED"
 
@@ -65,6 +67,7 @@ class Product(Base):
     description = Column(Text, nullable=True)
     price = Column(Numeric(12, 2), nullable=False)
     stock_quantity = Column(Integer, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False, server_default=text('true'))
     image_url = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -130,3 +133,8 @@ class OrderItem(Base):
 
     order = relationship("Order", back_populates="items")
     product = relationship("Product", back_populates="order_items")
+
+    @property
+    def product_name(self):
+        return self.product.name if self.product else None
+

@@ -81,6 +81,12 @@ def checkout(
                     detail=f"Produk dengan ID {item.product_id} tidak ditemukan",
                 )
 
+            if not product.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Produk tidak lagi tersedia",
+                )
+
             if product.stock_quantity < item.quantity:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
