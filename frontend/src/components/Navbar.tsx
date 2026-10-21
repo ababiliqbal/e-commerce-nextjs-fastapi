@@ -11,6 +11,8 @@ import {
   MapPin,
   LogOut,
   ChevronDown,
+  LayoutDashboard,
+  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -156,85 +158,131 @@ export function Navbar() {
             {mounted && (
               <>
                 {user ? (
-                  /* User Sudah Login -> Tampilkan Profile Menu Dropdown */
-                  <div className="relative" ref={dropdownRef}>
-                    <button
-                      id="navbar-profile-button"
-                      type="button"
-                      onClick={() => setDropdownOpen(!dropdownOpen)}
-                      className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-border/80 hover:border-violet-700/40 bg-card hover:bg-violet-700/5 transition-all text-left cursor-pointer group"
-                      aria-expanded={dropdownOpen}
-                      aria-haspopup="true"
-                    >
-                      {/* Avatar Inisial */}
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-tr from-violet-700 to-purple-600 text-white font-bold text-xs shadow-xs ring-1 ring-violet-700/20 group-hover:ring-violet-700/50 transition-all">
-                        {getInitials(user.full_name)}
-                      </div>
-
-                      {/* Nama User */}
-                      <span className="hidden sm:inline-block max-w-[130px] truncate text-xs sm:text-sm font-medium text-foreground">
-                        {user.full_name}
-                      </span>
-
-                      <ChevronDown
-                        className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-                          dropdownOpen ? "rotate-180 text-violet-700" : ""
-                        }`}
-                      />
-                    </button>
-
-                    {/* Dropdown Menu Container */}
-                    {dropdownOpen && (
-                      <div
-                        role="menu"
-                        aria-orientation="vertical"
-                        aria-labelledby="navbar-profile-button"
-                        className="absolute right-0 mt-2 w-72 rounded-2xl border border-border/80 bg-card p-2 text-card-foreground shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150"
+                  <>
+                    {/* Tombol Cepat Panel Admin untuk Desktop */}
+                    {user.role === "ADMIN" && (
+                      <Button
+                        asChild
+                        size="sm"
+                        className="hidden md:inline-flex cursor-pointer gap-2 text-xs sm:text-sm font-semibold bg-violet-700 hover:bg-violet-800 text-white rounded-xl shadow-xs transition-all active:scale-95 border-0"
                       >
-                        {/* Header Info User: Nama, Email, & Badge Role */}
-                        <div className="px-3 py-2.5 border-b border-border/70">
-                          <p className="text-sm font-bold text-foreground truncate">
-                            {user.full_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {user.email}
-                          </p>
-                          <div className="mt-2 flex items-center gap-1.5">
-                            <Badge
-                              className={`text-[10px] font-semibold tracking-wider px-2 py-0.5 uppercase ${
-                                user.role === "ADMIN"
-                                  ? "bg-violet-700 text-white border-transparent"
-                                  : "bg-violet-700/10 text-violet-700 dark:text-violet-300 border-violet-700/20"
-                              }`}
-                            >
-                              {user.role}
-                            </Badge>
-                            <span className="text-[10px] text-muted-foreground">
-                              • Akun {user.auth_provider}
-                            </span>
-                          </div>
+                        <Link href="/admin">
+                          <Shield className="h-4 w-4" />
+                          <span>Panel Admin</span>
+                        </Link>
+                      </Button>
+                    )}
+
+                    {/* User Sudah Login -> Tampilkan Profile Menu Dropdown */}
+                    <div className="relative" ref={dropdownRef}>
+                      <button
+                        id="navbar-profile-button"
+                        type="button"
+                        onClick={() => setDropdownOpen(!dropdownOpen)}
+                        className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-border/80 hover:border-violet-700/40 bg-card hover:bg-violet-700/5 transition-all text-left cursor-pointer group"
+                        aria-expanded={dropdownOpen}
+                        aria-haspopup="true"
+                      >
+                        {/* Avatar Inisial */}
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-tr from-violet-700 to-purple-600 text-white font-bold text-xs shadow-xs ring-1 ring-violet-700/20 group-hover:ring-violet-700/50 transition-all">
+                          {getInitials(user.full_name)}
                         </div>
 
-                        {/* Menu Items */}
-                        <div className="py-1 space-y-0.5">
-                          {/* Item: Profil Pengiriman */}
-                          <button
-                            id="menu-shipping-profile"
-                            role="menuitem"
-                            type="button"
-                            onClick={() => {
-                              setDropdownOpen(false);
-                              setIsShippingModalOpen(true);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2 text-xs sm:text-sm rounded-xl text-foreground hover:bg-violet-700/10 hover:text-violet-700 dark:hover:text-violet-300 transition-colors text-left cursor-pointer"
-                          >
-                            <MapPin className="h-4 w-4 shrink-0 text-violet-700 dark:text-violet-400" />
-                            <div>
-                              <p className="font-medium">Profil Pengiriman Saya</p>
-                              <p className="text-[11px] text-muted-foreground">
-                                Telepon & alamat checkout default
-                              </p>
+                        {/* Nama User */}
+                        <span className="hidden sm:inline-block max-w-[130px] truncate text-xs sm:text-sm font-medium text-foreground">
+                          {user.full_name}
+                        </span>
+
+                        {/* Badge Role ADMIN di trigger Navbar */}
+                        {user.role === "ADMIN" && (
+                          <span className="hidden lg:inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-violet-100 text-violet-800 border border-violet-300 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-700">
+                            ADMIN
+                          </span>
+                        )}
+
+                        <ChevronDown
+                          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                            dropdownOpen ? "rotate-180 text-violet-700" : ""
+                          }`}
+                        />
+                      </button>
+
+                      {/* Dropdown Menu Container */}
+                      {dropdownOpen && (
+                        <div
+                          role="menu"
+                          aria-orientation="vertical"
+                          aria-labelledby="navbar-profile-button"
+                          className="absolute right-0 mt-2 w-72 rounded-2xl border border-border/80 bg-card p-2 text-card-foreground shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150"
+                        >
+                          {/* Header Info User: Nama, Email, & Badge Role */}
+                          <div className="px-3 py-2.5 border-b border-border/70">
+                            <p className="text-sm font-bold text-foreground truncate">
+                              {user.full_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {user.email}
+                            </p>
+                            <div className="mt-2 flex items-center gap-1.5">
+                              <Badge
+                                className={`text-[10px] font-bold tracking-wider px-2 py-0.5 uppercase ${
+                                  user.role === "ADMIN"
+                                    ? "bg-violet-100 text-violet-800 border border-violet-300 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-700"
+                                    : "bg-violet-700/10 text-violet-700 dark:text-violet-300 border-violet-700/20"
+                                }`}
+                              >
+                                {user.role}
+                              </Badge>
+                              <span className="text-[10px] text-muted-foreground">
+                                • Akun {user.auth_provider}
+                              </span>
                             </div>
+                          </div>
+
+                          {/* Menu Items */}
+                          <div className="py-1 space-y-1">
+                            {/* Item Khusus Admin: Panel Admin */}
+                            {user.role === "ADMIN" && (
+                              <Link
+                                id="menu-admin-panel"
+                                role="menuitem"
+                                href="/admin"
+                                onClick={() => setDropdownOpen(false)}
+                                className="w-full flex items-center gap-3 px-3 py-2 text-xs sm:text-sm rounded-xl text-violet-800 dark:text-violet-200 bg-violet-50 dark:bg-violet-950/50 hover:bg-violet-100 dark:hover:bg-violet-900/50 border border-violet-200 dark:border-violet-800/60 transition-colors font-semibold"
+                              >
+                                <LayoutDashboard className="h-4 w-4 shrink-0 text-violet-700 dark:text-violet-400" />
+                                <div>
+                                  <p className="font-bold flex items-center gap-1.5">
+                                    Panel Admin
+                                    <span className="text-[9px] px-1 py-0.2 rounded bg-violet-200 text-violet-900 dark:bg-violet-800 dark:text-violet-100 font-bold">
+                                      CMS
+                                    </span>
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground font-normal">
+                                    Ringkasan analitik, katalog & pesanan
+                                  </p>
+                                </div>
+                              </Link>
+                            )}
+
+                            {/* Item: Profil Pengiriman */}
+                            <button
+                              id="menu-shipping-profile"
+                              role="menuitem"
+                              type="button"
+                              onClick={() => {
+                                setDropdownOpen(false);
+                                setIsShippingModalOpen(true);
+                              }}
+                              className="w-full flex items-center gap-3 px-3 py-2 text-xs sm:text-sm rounded-xl text-foreground hover:bg-violet-700/10 hover:text-violet-700 dark:hover:text-violet-300 transition-colors text-left cursor-pointer"
+                            >
+                              <MapPin className="h-4 w-4 shrink-0 text-violet-700 dark:text-violet-400" />
+                              <div>
+                                <p className="font-medium">Profil Pengiriman Saya</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  Telepon & alamat checkout default
+                                </p>
+                              </div>
                           </button>
 
                           {/* Item: Riwayat Pesanan */}
@@ -271,7 +319,8 @@ export function Navbar() {
                       </div>
                     )}
                   </div>
-                ) : (
+                </>
+              ) : (
                   /* User Belum Login -> Tombol Masuk & Daftar */
                   <div className="flex items-center gap-1.5 sm:gap-2">
                     <Button
