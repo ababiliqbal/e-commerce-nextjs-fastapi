@@ -138,3 +138,30 @@ class OrderItem(Base):
     def product_name(self):
         return self.product.name if self.product else None
 
+    @property
+    def product_image(self):
+        if not self.product:
+            return None
+        if self.product.images:
+            primary_img = next(
+                (
+                    img.image_url
+                    for img in self.product.images
+                    if img.is_primary and img.image_url and img.image_url.strip()
+                ),
+                None,
+            )
+            if primary_img:
+                return primary_img
+            first_img = next(
+                (
+                    img.image_url
+                    for img in self.product.images
+                    if img.image_url and img.image_url.strip()
+                ),
+                None,
+            )
+            if first_img:
+                return first_img
+        return self.product.image_url
+

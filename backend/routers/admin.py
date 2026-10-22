@@ -237,13 +237,22 @@ def create_admin_product(
     db: Session = Depends(get_db),
 ):
     """Membuat produk baru beserta susunan galeri gambar product_images secara atomik."""
-    primary_image_url = payload.image_url
+    primary_image_url = None
     if payload.images:
         primary_item = next(
-            (img for img in payload.images if img.is_primary),
-            payload.images[0],
+            (img for img in payload.images if img.is_primary and img.image_url and img.image_url.strip()),
+            None,
         )
-        primary_image_url = primary_item.image_url
+        if not primary_item and payload.images:
+            primary_item = next(
+                (img for img in payload.images if img.image_url and img.image_url.strip()),
+                None,
+            )
+        if primary_item:
+            primary_image_url = primary_item.image_url.strip()
+
+    if not primary_image_url and payload.image_url and payload.image_url.strip():
+        primary_image_url = payload.image_url.strip()
 
     new_product = Product(
         name=payload.name,
@@ -259,10 +268,15 @@ def create_admin_product(
     # Tambahkan galeri multi-gambar
     has_primary = any(img.is_primary for img in payload.images)
     for idx, img in enumerate(payload.images):
-        is_prim = img.is_primary if has_primary else (idx == 0)
+        clean_url = img.image_url.strip() if img.image_url else ""
+        is_prim = (
+            img.is_primary
+            if has_primary
+            else (clean_url == primary_image_url if primary_image_url else idx == 0)
+        )
         prod_img = ProductImage(
             product_id=new_product.id,
-            image_url=img.image_url,
+            image_url=clean_url,
             is_primary=is_prim,
             display_order=img.display_order if img.display_order is not None else idx,
         )
@@ -299,13 +313,22 @@ def update_admin_product(
     product.is_active = payload.is_active
 
     # Tentukan primary image URL
-    primary_image_url = payload.image_url
+    primary_image_url = None
     if payload.images:
         primary_item = next(
-            (img for img in payload.images if img.is_primary),
-            payload.images[0],
+            (img for img in payload.images if img.is_primary and img.image_url and img.image_url.strip()),
+            None,
         )
-        primary_image_url = primary_item.image_url
+        if not primary_item and payload.images:
+            primary_item = next(
+                (img for img in payload.images if img.image_url and img.image_url.strip()),
+                None,
+            )
+        if primary_item:
+            primary_image_url = primary_item.image_url.strip()
+
+    if not primary_image_url and payload.image_url and payload.image_url.strip():
+        primary_image_url = payload.image_url.strip()
 
     product.image_url = primary_image_url
 
@@ -313,10 +336,15 @@ def update_admin_product(
     db.query(ProductImage).filter(ProductImage.product_id == product.id).delete()
     has_primary = any(img.is_primary for img in payload.images)
     for idx, img in enumerate(payload.images):
-        is_prim = img.is_primary if has_primary else (idx == 0)
+        clean_url = img.image_url.strip() if img.image_url else ""
+        is_prim = (
+            img.is_primary
+            if has_primary
+            else (clean_url == primary_image_url if primary_image_url else idx == 0)
+        )
         prod_img = ProductImage(
             product_id=product.id,
-            image_url=img.image_url,
+            image_url=clean_url,
             is_primary=is_prim,
             display_order=img.display_order if img.display_order is not None else idx,
         )
@@ -377,7 +405,11 @@ def get_admin_orders(
     """
     query = (
         db.query(Order)
-        .options(selectinload(Order.items).selectinload(OrderItem.product))
+        .options(
+            selectinload(Order.items)
+            .selectinload(OrderItem.product)
+            .selectinload(Product.images)
+        )
         .order_by(Order.created_at.desc())
     )
 
@@ -417,7 +449,11 @@ def update_order_status(
     """
     order = (
         db.query(Order)
-        .options(selectinload(Order.items).selectinload(OrderItem.product))
+        .options(
+            selectinload(Order.items)
+            .selectinload(OrderItem.product)
+            .selectinload(Product.images)
+        )
         .filter(Order.id == id)
         .first()
     )

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Package,
@@ -26,10 +25,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/store/useAuthStore";
-import { apiFetch, Product, getPrimaryProductImage } from "@/lib/api";
+import {
+  apiFetch,
+  Product,
+  getPrimaryProductImage,
+  FALLBACK_PRODUCT_IMAGE,
+} from "@/lib/api";
 
 interface OrderItem {
+  id?: string;
   product_id: string;
+  product_name?: string | null;
+  product_image?: string | null;
   quantity: number;
   price_at_purchase: number;
 }
@@ -311,9 +318,14 @@ export default function OrderHistoryPage() {
                       <div className="divide-y divide-border/60">
                         {order.items.map((item, idx) => {
                           const product = productsMap.get(item.product_id);
-                          const primaryImage = product
-                            ? getPrimaryProductImage(product)
-                            : null;
+                          const primaryImage =
+                            item.product_image ||
+                            (product ? getPrimaryProductImage(product) : null) ||
+                            FALLBACK_PRODUCT_IMAGE;
+                          const productName =
+                            item.product_name ||
+                            product?.name ||
+                            `Produk #${item.product_id.slice(0, 8)}`;
 
                           return (
                             <div
@@ -324,12 +336,15 @@ export default function OrderHistoryPage() {
                                 {/* Thumbnail Produk */}
                                 <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted border border-border/60">
                                   {primaryImage ? (
-                                    <Image
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img
                                       src={primaryImage}
-                                      alt={product?.name || "Produk"}
-                                      fill
-                                      className="object-cover"
-                                      sizes="48px"
+                                      alt={productName}
+                                      className="h-full w-full object-cover"
+                                      onError={(e) => {
+                                        (e.currentTarget as HTMLImageElement).src =
+                                          FALLBACK_PRODUCT_IMAGE;
+                                      }}
                                     />
                                   ) : (
                                     <div className="flex h-full w-full items-center justify-center text-muted-foreground">
@@ -341,7 +356,7 @@ export default function OrderHistoryPage() {
                                 {/* Detail Item */}
                                 <div className="min-w-0">
                                   <p className="text-sm font-semibold text-foreground truncate">
-                                    {product?.name || `Produk #${item.product_id.slice(0, 8)}`}
+                                    {productName}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
                                     {item.quantity} x {formatPrice(item.price_at_purchase)}

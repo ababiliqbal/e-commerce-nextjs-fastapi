@@ -59,6 +59,7 @@ export interface OrderItem {
   id?: string;
   product_id: string;
   product_name?: string | null;
+  product_image?: string | null;
   quantity: number;
   price_at_purchase: number;
 }
