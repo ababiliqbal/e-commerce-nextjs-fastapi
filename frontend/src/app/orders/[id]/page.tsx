@@ -15,6 +15,7 @@ import {
   Phone,
   User as UserIcon,
   ChevronRight,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -264,7 +265,7 @@ export default function OrderDetailPage() {
               <div className="text-center space-y-3">
                 {order.status === "PAID" && (
                   <>
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 ring-1 ring-blue-500/20">
                       <CheckCircle2 className="h-10 w-10" />
                     </div>
                     <div>
@@ -272,7 +273,39 @@ export default function OrderDetailPage() {
                         Pembayaran Berhasil!
                       </h1>
                       <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground">
-                        Terima kasih atas pesanan Anda. Kami telah menerima pembayaran dan pesanan akan segera diproses.
+                        Terima kasih atas pesanan Anda. Kami telah menerima pembayaran dan pesanan sedang dipersiapkan untuk pengiriman.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {order.status === "SHIPPED" && (
+                  <>
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300 ring-1 ring-violet-500/20">
+                      <Truck className="h-10 w-10" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                        Pesanan Sedang Dikirim!
+                      </h1>
+                      <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground">
+                        Paket Anda telah diserahkan ke kurir ekspedisi dan sedang dalam perjalanan menuju alamat tujuan.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {order.status === "COMPLETED" && (
+                  <>
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 ring-1 ring-emerald-500/20">
+                      <CheckCircle2 className="h-10 w-10" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                        Pesanan Selesai!
+                      </h1>
+                      <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground">
+                        Paket telah sampai di alamat tujuan dan transaksi selesai. Terima kasih telah berbelanja di Amba Shop!
                       </p>
                     </div>
                   </>
@@ -311,6 +344,8 @@ export default function OrderDetailPage() {
                 )}
 
                 {order.status !== "PAID" &&
+                  order.status !== "SHIPPED" &&
+                  order.status !== "COMPLETED" &&
                   order.status !== "PENDING" &&
                   order.status !== "CANCELLED" && (
                     <>
@@ -345,8 +380,20 @@ export default function OrderDetailPage() {
 
                     <div>
                       {order.status === "PAID" && (
-                        <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white font-semibold uppercase tracking-wider text-xs">
+                        <Badge className="bg-blue-600 hover:bg-blue-600 text-white font-semibold uppercase tracking-wider text-xs">
                           LUNAS (PAID)
+                        </Badge>
+                      )}
+                      {order.status === "SHIPPED" && (
+                        <Badge className="bg-violet-700 hover:bg-violet-700 text-white font-semibold uppercase tracking-wider text-xs flex items-center gap-1">
+                          <Truck className="w-3.5 h-3.5" />
+                          <span>SEDANG DIKIRIM (SHIPPED)</span>
+                        </Badge>
+                      )}
+                      {order.status === "COMPLETED" && (
+                        <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white font-semibold uppercase tracking-wider text-xs flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>PESANAN SELESAI (COMPLETED)</span>
                         </Badge>
                       )}
                       {order.status === "PENDING" && (
@@ -366,6 +413,8 @@ export default function OrderDetailPage() {
                         </Badge>
                       )}
                       {order.status !== "PAID" &&
+                        order.status !== "SHIPPED" &&
+                        order.status !== "COMPLETED" &&
                         order.status !== "PENDING" &&
                         order.status !== "CANCELLED" && (
                           <Badge variant="secondary" className="text-xs uppercase">

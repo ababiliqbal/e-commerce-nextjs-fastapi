@@ -24,6 +24,61 @@ export interface Product {
   created_at?: string;
 }
 
+export interface ProductImageInput {
+  id?: string;
+  image_url: string;
+  is_primary: boolean;
+  display_order: number;
+}
+
+export interface ProductAdminWriteRequest {
+  name: string;
+  description: string | null;
+  price: number;
+  stock_quantity: number;
+  is_active: boolean;
+  image_url?: string | null;
+  images: ProductImageInput[];
+}
+
+export interface ImageUploadResponse {
+  image_url: string;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+}
+
+export type OrderStatus =
+  | "PENDING"
+  | "PAID"
+  | "SHIPPED"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export interface OrderItem {
+  id?: string;
+  product_id: string;
+  product_name?: string | null;
+  quantity: number;
+  price_at_purchase: number;
+}
+
+export interface OrderResponse {
+  id: string;
+  user_id?: string | null;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  shipping_address: string;
+  total_amount: number;
+  status: OrderStatus;
+  payment_gateway_ref?: string | null;
+  created_at: string;
+  items: OrderItem[];
+}
+
+export type Order = OrderResponse;
+
 export interface OrdersByStatus {
   PENDING: number;
   PAID: number;
@@ -302,18 +357,32 @@ export const apiClient = {
     }),
   delete: (endpoint: string, init?: RequestInit) =>
     apiFetch(endpoint, { ...init, method: "DELETE" }),
+  patch: (endpoint: string, body?: unknown, init?: RequestInit) =>
+    apiFetch(endpoint, {
+      ...init,
+      method: "PATCH",
+      headers: {
+        ...(body && !(body instanceof FormData)
+          ? { "Content-Type": "application/json" }
+          : {}),
+        ...init?.headers,
+      },
+      body:
+        body instanceof FormData
+          ? body
+          : body !== undefined
+          ? JSON.stringify(body)
+          : undefined,
+    }),
 };
 
 /**
- * Mengambil ringkasan analitik eksekutif untuk Dashboard Admin
- * dari endpoint GET /api/v1/admin/analytics/summary menggunakan fetch berautentikasi.
- * Melempar error dengan pesan deskriptif jika server merespons 401 atau 403.
+ * Helper terpusat untuk memproses respons API Admin dan menangani error standar (401, 403, detail error JSON)
  */
-export async function fetchAdminAnalytics(): Promise<AdminAnalyticsResponse> {
-  const response = await apiFetch("/api/v1/admin/analytics/summary", {
-    method: "GET",
-  });
-
+async function handleApiResponse<T>(
+  response: Response,
+  defaultErrorMessage: string
+): Promise<T> {
   if (response.status === 401) {
     throw new Error(
       "Sesi autentikasi telah berakhir atau Anda belum terautentikasi (401 Unauthorized)."
@@ -327,7 +396,7 @@ export async function fetchAdminAnalytics(): Promise<AdminAnalyticsResponse> {
   }
 
   if (!response.ok) {
-    let errorMessage = `Gagal memuat analitik admin (${response.status} ${response.statusText})`;
+    let errorMessage = `${defaultErrorMessage} (${response.status} ${response.statusText})`;
     try {
       const errData = await response.json();
       if (errData?.detail) {
@@ -335,6 +404,11 @@ export async function fetchAdminAnalytics(): Promise<AdminAnalyticsResponse> {
           typeof errData.detail === "string"
             ? errData.detail
             : JSON.stringify(errData.detail);
+      } else if (errData?.message) {
+        errorMessage =
+          typeof errData.message === "string"
+            ? errData.message
+            : JSON.stringify(errData.message);
       }
     } catch {
       // Abaikan jika respons bukan JSON
@@ -343,6 +417,189 @@ export async function fetchAdminAnalytics(): Promise<AdminAnalyticsResponse> {
   }
 
   return response.json();
+}
+
+/**
+ * Mengambil ringkasan analitik eksekutif untuk Dashboard Admin
+ * dari endpoint GET /api/v1/admin/analytics/summary menggunakan fetch berautentikasi.
+ * Melempar error dengan pesan deskriptif jika server merespons 401 atau 403.
+ */
+export async function fetchAdminAnalytics(): Promise<AdminAnalyticsResponse> {
+  const response = await apiFetch("/api/v1/admin/analytics/summary", {
+    method: "GET",
+  });
+
+  return handleApiResponse<AdminAnalyticsResponse>(
+    response,
+    "Gagal memuat analitik admin"
+  );
+}
+
+// ============================================================================
+// API Manajemen Katalog & Upload Admin (V1.3.0)
+// ============================================================================
+
+/**
+ * Mengambil seluruh daftar produk untuk CMS Admin (termasuk produk nonaktif jika includeInactive=true)
+ * Endpoint: GET /api/v1/admin/products
+ */
+export async function fetchAdminProducts(
+  search?: string,
+  includeInactive: boolean = true
+): Promise<Product[]> {
+  const params = new URLSearchParams();
+  params.set("include_inactive", String(includeInactive));
+  if (search && search.trim()) {
+    params.set("search", search.trim());
+  }
+
+  const response = await apiFetch(`/api/v1/admin/products?${params.toString()}`, {
+    method: "GET",
+  });
+
+  return handleApiResponse<Product[]>(
+    response,
+    "Gagal memuat katalog produk admin"
+  );
+}
+
+/**
+ * Membuat produk baru beserta galeri multi-gambar secara atomik
+ * Endpoint: POST /api/v1/admin/products
+ */
+export async function createAdminProduct(
+  payload: ProductAdminWriteRequest
+): Promise<Product> {
+  const response = await apiFetch("/api/v1/admin/products", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return handleApiResponse<Product>(
+    response,
+    "Gagal menambahkan produk baru"
+  );
+}
+
+/**
+ * Memperbarui data produk, kuantitas stok, dan susunan galeri gambar
+ * Endpoint: PUT /api/v1/admin/products/${productId}
+ */
+export async function updateAdminProduct(
+  productId: string,
+  payload: ProductAdminWriteRequest
+): Promise<Product> {
+  const response = await apiFetch(`/api/v1/admin/products/${productId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return handleApiResponse<Product>(
+    response,
+    `Gagal memperbarui produk dengan ID ${productId}`
+  );
+}
+
+/**
+ * Melakukan soft-delete (pengarsipan) produk tanpa menghapus baris fisik database
+ * Endpoint: DELETE /api/v1/admin/products/${productId}
+ */
+export async function archiveAdminProduct(
+  productId: string
+): Promise<{ status: string; product_id: string; is_active: boolean }> {
+  const response = await apiFetch(`/api/v1/admin/products/${productId}`, {
+    method: "DELETE",
+  });
+
+  return handleApiResponse<{ status: string; product_id: string; is_active: boolean }>(
+    response,
+    `Gagal mengarsipkan produk dengan ID ${productId}`
+  );
+}
+
+/**
+ * Mengunggah berkas gambar ke Cloud Object Storage (Supabase Storage) menggunakan FormData
+ * Endpoint: POST /api/v1/admin/upload
+ * 
+ * PERINGATAN KRITIS: Header 'Content-Type' TIDAK disetel manual agar browser dapat
+ * menentukan boundary multipart/form-data secara otomatis.
+ */
+export async function uploadProductImage(
+  file: File
+): Promise<ImageUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiFetch("/api/v1/admin/upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  return handleApiResponse<ImageUploadResponse>(
+    response,
+    "Gagal mengunggah gambar produk"
+  );
+}
+
+// ============================================================================
+// API Manajemen Pesanan Admin (Order Fulfillment FSM - V1.3.0)
+// ============================================================================
+
+/**
+ * Mengambil seluruh daftar pesanan pelanggan dengan opsi filter status dan pencarian
+ * Endpoint: GET /api/v1/admin/orders
+ */
+export async function fetchAdminOrders(
+  statusFilter?: string,
+  search?: string
+): Promise<OrderResponse[]> {
+  const params = new URLSearchParams();
+  if (statusFilter && statusFilter.trim()) {
+    params.set("status_filter", statusFilter.trim());
+  }
+  if (search && search.trim()) {
+    params.set("search", search.trim());
+  }
+
+  const qs = params.toString();
+  const endpoint = `/api/v1/admin/orders${qs ? `?${qs}` : ""}`;
+
+  const response = await apiFetch(endpoint, {
+    method: "GET",
+  });
+
+  return handleApiResponse<OrderResponse[]>(
+    response,
+    "Gagal memuat daftar pesanan admin"
+  );
+}
+
+/**
+ * Memperbarui status siklus hidup pesanan sesuai aturan Finite State Machine (FSM)
+ * Endpoint: PATCH /api/v1/admin/orders/${orderId}/status
+ */
+export async function updateAdminOrderStatus(
+  orderId: string,
+  status: "SHIPPED" | "COMPLETED" | "CANCELLED"
+): Promise<OrderResponse> {
+  const response = await apiFetch(`/api/v1/admin/orders/${orderId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  return handleApiResponse<OrderResponse>(
+    response,
+    `Gagal memperbarui status pesanan ${orderId}`
+  );
 }
 
 export default apiFetch;
