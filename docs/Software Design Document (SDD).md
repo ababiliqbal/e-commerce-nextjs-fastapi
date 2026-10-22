@@ -4,55 +4,56 @@
 
 ### Riwayat Dokumen (Document Control)
 
-| Versi | Tanggal     | Penulis         | Deskripsi Perubahan (Change Log)                                                                                                                                                             | Status  |
-| :---- | :---------- | :-------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------ |
-| 1.0.0 | 12 Okt 2026 | M. Iqbal Ababil | Inisialisasi MVP, Arsitektur Database, Integrasi Midtrans.                                                                                                                                   | Dirilis |
-| 1.1.0 | 16 Okt 2026 | M. Iqbal Ababil | Refactoring UI/UX (CRO Pattern, Brand Color 'Tech Violet'), Security Audit (CORS Regex, Rate Limiting, XSS Validation).                                                                      | Dirilis |
-| 1.2.0 | 19 Okt 2026 | M. Iqbal Ababil | Desain Arsitektur IAM (JWT Dual-Token, Argon2/Bcrypt, Google OIDC), Skema Fisik `users` & `product_images`, Migrasi Alembic, dan Algoritma Eager Loading (`1:N`).                            | Dirilis |
-| 1.3.0 | 21 Okt 2026 | M. Iqbal Ababil | DRAF: Desain Arsitektur CMS Internal (Admin Dashboard), Real-Time SQL Analytics, Soft-Delete (`is_active`), Order Fulfillment FSM, & Integrasi Cloud Object Storage (Supabase Storage / S3). | Dirilis |
-| 2.0.0 | TBA         | M. Iqbal Ababil | RENCANA: Modul Integrasi Eksternal (API Logistik 3PL), Ongkos Kirim Dinamis & Order State Machine V2.                                                                                        | Rencana |
+| Versi | Tanggal     | Penulis         | Deskripsi Perubahan (Change Log)                                                                                                                                                       | Status  |
+| :---- | :---------- | :-------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------ |
+| 1.0.0 | 12 Okt 2026 | M. Iqbal Ababil | Inisialisasi MVP, Arsitektur Database, Integrasi Midtrans.                                                                                                                             | Dirilis |
+| 1.1.0 | 16 Okt 2026 | M. Iqbal Ababil | Refactoring UI/UX (CRO Pattern, Brand Color 'Tech Violet'), Security Audit (CORS Regex, Rate Limiting, XSS Validation).                                                                | Dirilis |
+| 1.2.0 | 19 Okt 2026 | M. Iqbal Ababil | Desain Arsitektur IAM (JWT Dual-Token, Argon2/Bcrypt, Google OIDC), Skema Fisik `users` & `product_images`, Migrasi Alembic, dan Algoritma Eager Loading (`1:N`).                      | Dirilis |
+| 1.3.0 | 21 Okt 2026 | M. Iqbal Ababil | Desain Arsitektur CMS Internal (Admin Dashboard), Real-Time SQL Analytics, Soft-Delete (`is_active`), Order Fulfillment FSM, & Integrasi Cloud Object Storage (Supabase Storage / S3). | Dirilis |
+| 2.0.0 | 22 Okt 2026 | M. Iqbal Ababil | DRAF: Desain Arsitektur Logistik 3PL Hibrida (`logistics.py`), Skema `weight_grams` & Atribut Pengiriman/Resi `orders`, Algoritma Zero-Trust Shipping Cost, & Order State Machine V2.  | Draf    |
 
-**Versi:** 1.3.0 **Status:** Dirilis
+**Versi:** 2.0.0 **Status:** Draf
 
 ## BAB 1: DESAIN ARSITEKTURAL (SYSTEM ARCHITECTURE)
 
-Arsitektur sistem ini menggunakan pola **Decoupled 3-Tier Architecture** dengan pemisahan tegas (_Separation of Concerns_) antara lapisan presentasi, lapisan logika bisnis, dan lapisan persistensi data. Pada **Versi 1.3.0**, arsitektur diperluas untuk mendukung operasi **Internal Content Management System (CMS) & Operations Dashboard** melalui pemisahan jalur otorisasi `ADMIN` (_Role-Based Access Control_), pengalihan penyimpanan berkas gambar biner ke **Cloud Object Storage (Supabase Storage / S3)**, serta mesin agregasi analitik real-time di tingkat basis data.
+Arsitektur sistem ini menggunakan pola **Decoupled 3-Tier Architecture** dengan pemisahan tegas (_Separation of Concerns_) antara lapisan presentasi, lapisan logika bisnis, dan lapisan persistensi data. Pada rilis mayor **Versi 2.0.0**, arsitektur diperluas dengan subsistem **Third-Party Logistics (3PL) & Parcel Tracking Engine** menggunakan pola desain **Dual-Mode Adapter Pattern**. Sistem mengintegrasikan perhitungan ongkos kirim berbasis berat fisik dan geolokasi kota tujuan ke dalam invarian transaksi _Zero-Trust Checkout_, menyinkronkan komponen biaya pengiriman dengan _Payment Gateway_ Midtrans Snap, serta memperluas _Order State Machine_ untuk mendukung penerbitan Nomor Resi (_Airwaybill_) dan pelacakan perjalanan paket secara _real-time_.
 
 ### 1.1 Dekomposisi Modul (Modular Breakdown)
 
 Sistem dipecah menjadi modul-modul independen yang berjalan di kontainer atau _runtime_ terisolasi masing-masing:
 
 1. **Tier 1: Presentation Module (Next.js - Client & SSR)**
-   - **Storefront UI Components:** Komponen React pelanggan (Grid Produk, _Interactive Product Image Gallery_, _Google Sign-In Button_, dan _Dynamic Auth Navbar_) dengan prinsip CRO dan palet warna "Tech Violet".
-   - **Admin Backoffice UI Components [Ditambahkan V1.3.0]:** Ruang kerja internal (`/admin/*`) yang dilindungi _Client Role Guard_, mencakup _Admin Sidebar Shell_, _Executive KPI & Low-Stock Cards_, _Product CRUD Modal with Drag-and-Drop Image Uploader_, serta _Order Fulfillment Table_.
+   - **Storefront & Logistics UI Components \[Diperbarui V2.0.0\]:** Komponen React pelanggan yang mencakup Grid Produk, _Interactive Product Image Gallery_ dengan indikator berat produk (`weight_grams`), _Dynamic Shipping Calculator & Courier Selector_ di halaman `/cart`, _Google Sign-In Button_, _Dynamic Auth Navbar_, serta komponen **_Interactive Parcel Tracking Timeline_** di halaman `/orders/[id]` dan `/orders/history`.
+   - **Admin Backoffice UI Components \[Diperbarui V2.0.0\]:** Ruang kerja internal (`/admin/*`) yang dilindungi _Client Role Guard_, mencakup _Admin Sidebar Shell_, _Executive KPI & Low-Stock Cards_, _Product CRUD Modal_ (dilengkapi input `weight_grams` dan _Drag-and-Drop Image Uploader_), serta _Order Fulfillment Table_ (dilengkapi Modal Input & Generator Nomor Resi Pengiriman).
    - **State Manager:** Pengelola status memori lokal menggunakan **Zustand**, terbagi menjadi dua _store_ terisolasi:
-     1. `useCartStore`: Mengelola _state_ keranjang belanja di _localStorage_.
-     2. `useAuthStore`: Mengelola _state_ profil pengguna aktif (`user`), `access_token`, preferensi pengiriman tersimpan (`savedShipping`), serta isolasi sesi pesanan saat login/logout.
-   - **API Client & Auth Interceptor [Diperbarui V1.3.0]:** Layanan _fetcher_ pembungkus _request_ HTTP ke _backend_ yang menyisipkan _Header_ `Authorization: Bearer <access_token>`, menyertakan `credentials: "include"`, menangani _silent token refresh_, serta mendukung pengiriman `FormData` (`multipart/form-data`) untuk unggahan gambar Admin.
+     1. `useCartStore`: Mengelola _state_ keranjang belanja di _localStorage_ beserta perhitungan otomatis akumulasi kuantitas, subtotal harga, dan **total berat fisik keranjang (`totalWeightGrams`)**.
+     2. `useAuthStore`: Mengelola _state_ profil pengguna aktif (`user`), `access_token`, serta preferensi pengiriman tersimpan (`savedShipping` yang kini mencakup Provinsi, Kota/Kabupaten, Kode Pos, dan Alamat).
+   - **API Client & Auth Interceptor:** Layanan _fetcher_ pembungkus _request_ HTTP ke _backend_ yang menyisipkan _Header_ `Authorization: Bearer <access_token>`, menyertakan `credentials: "include"`, menangani _silent token refresh_, mendukung pengiriman `FormData`, serta memanggil _endpoint_ kalkulasi ongkir dan pelacakan resi.
 
 2. **Tier 2: Application/API Module (FastAPI - Backend)**
-   - **Router/Controller:** Menerima _request_ HTTP dari Next.js, memvalidasi parameter menggunakan Pydantic, dan menerapkan _Rate Limiting_ (`slowapi`). Mencakup `auth_router`, `products_router`, `orders_router`, dan **[Ditambahkan V1.3.0]** `admin_router` (`/api/v1/admin/*`) yang seluruh rutenya dikunci secara terpusat menggunakan _dependency_ `Depends(require_role("ADMIN"))`.
-   - **Service/Business Logic:** Berisi fungsi inti: kalkulasi harga (_Zero-Trust Pricing_), validasi stok, pemanggilan _Payment Gateway_, _hashing_ kata sandi (`Bcrypt`), manajemen JWT (`HS256`), verifikasi OIDC Google, serta **[Ditambahkan V1.3.0]** validasi _Finite State Machine_ (FSM) pemenuhan pesanan dan layanan pengunggah objek biner (`storage.py`) ke Supabase Storage.
-   - **Repository/DAO (Data Access Object):** Modul kueri SQL/ORM (SQLAlchemy) untuk berinteraksi dengan database, termasuk strategi _Eager Loading_ (`selectinload`), pemfilteran produk aktif (`is_active == True`), dan **[Ditambahkan V1.3.0]** kueri agregasi analitik eksekutif (`SUM`, `COUNT`, `CASE WHEN`).
+   - **Router/Controller:** Menerima _request_ HTTP dari Next.js, memvalidasi parameter menggunakan Pydantic, dan menerapkan _Rate Limiting_ (`slowapi`). Mencakup `auth_router`, `products_router`, `orders_router`, `admin_router`, dan **\[Ditambahkan V2.0.0\]** `logistics_router` (`/api/v1/logistics/*`) untuk penyediaan direktori Provinsi/Kota, kalkulasi tarif ongkos kirim multi-kurir, dan pelacakan manifes resi.
+   - **Service/Business Logic \[Diperbarui V2.0.0\]:** Berisi fungsi inti: kalkulasi harga dan ongkos kirim tertutup (**_Zero-Trust Pricing & Shipping Cost Verification_**), validasi stok, pemanggilan _Payment Gateway_ Midtrans Snap (dengan injeksi _item_ ongkos kirim), _hashing_ kata sandi (`Bcrypt`), manajemen JWT (`HS256`), verifikasi OIDC Google, layanan pengunggah objek biner (`storage.py`), validasi _Finite State Machine_ (FSM V2) pemenuhan pesanan berbasis nomor resi, serta **modul `logistics.py` (_Dual-Mode 3PL Adapter & Parcel Tracking Generator_)**.
+   - **Repository/DAO (Data Access Object):** Modul kueri SQL/ORM (SQLAlchemy) untuk berinteraksi dengan database, termasuk strategi _Eager Loading_ (`selectinload`), pemfilteran produk aktif (`is_active == True`), dan kueri agregasi analitik eksekutif.
 
-3. **Tier 3: Persistence & Object Storage Module (PostgreSQL, Alembic & Supabase Storage) [Diperbarui V1.3.0]**
+3. **Tier 3: Persistence & Object Storage Module (PostgreSQL, Alembic & Supabase Storage)**
    - **Relational Database:** Mesin basis data PostgreSQL dengan manajemen migrasi skema terstruktur menggunakan **Alembic**.
-   - **Cloud Object Storage [Ditambahkan V1.3.0]:** Layanan penyimpanan objek terdistribusi (Supabase Storage Bucket `product-images`) untuk menyimpan berkas fisik gambar produk (`.jpg`, `.png`, `.webp`) dan menyajikannya melalui CDN publik.
+   - **Cloud Object Storage:** Layanan penyimpanan objek terdistribusi (Supabase Storage Bucket `product-images`) untuk menyimpan berkas fisik gambar produk dan menyajikannya melalui CDN publik.
 
 ### 1.2 Relasi Kontrol (Control Relationships)
 
-Hubungan pemanggilan antar-modul bersifat **Uni-directional** (Satu Arah) dari atas ke bawah. Lapis bawah tidak pernah memanggil lapis atas, melainkan hanya mengembalikan _response_.
+Hubungan pemanggilan antar-modul bersifat **Uni-directional** (Satu Arah) dari atas ke bawah:
 
-- **Alur Standar & Katalog Multi-Gambar Publik:** `Next.js API Client` ➔ `FastAPI Product Router` ➔ `FastAPI Repository (Filter is_active=True + Eager Load Images)` ➔ `PostgreSQL`.
-- **Alur Autentikasi Google SSO:** `Next.js (Google SDK)` ➔ `FastAPI Auth Router (/auth/google)` ➔ `FastAPI Auth Service (Verify Token to Google OIDC Certificates)` ➔ `PostgreSQL (Upsert User)` ➔ `Return JWT + Set HttpOnly Cookie`.
-- **Alur Hybrid Checkout:** `Next.js API Client (Optional Bearer JWT)` ➔ `FastAPI Order Router` ➔ `FastAPI Service (Extract user_id + Verify is_active & Pessimistic Lock Stock)` ➔ `PostgreSQL`.
-- **Alur Unggah Gambar & Manajemen Katalog Admin [Ditambahkan V1.3.0]:** `Next.js Admin UI (Bearer JWT Admin)` ➔ `FastAPI Admin Router (Guard: require_role("ADMIN"))` ➔ `Storage Service (Validate MIME/Size & Upload to Supabase Storage Bucket)` ➔ `Return Public CDN URL` ➔ `PostgreSQL (Insert/Update products & product_images)`.
-- **Alur Analitik & Fulfillment Pesanan Admin [Ditambahkan V1.3.0]:** `Next.js Admin UI (Bearer JWT Admin)` ➔ `FastAPI Admin Router` ➔ `FastAPI Service (Execute SQL Aggregation / Validate Order FSM Transition)` ➔ `PostgreSQL`.
+- **Alur Standar & Katalog Multi-Gambar Publik:** `Next.js API Client` ➔ `FastAPI Product Router` ➔ `FastAPI Repository (Filter is_active=True + Eager Load Images + Weight)` ➔ `PostgreSQL`.
+- **Alur Kalkulasi Ongkos Kirim Dinamis \[Ditambahkan V2.0.0\]:** `Next.js Checkout UI (Select Province/City & Courier)` ➔ `FastAPI Logistics Router (POST /logistics/rates)` ➔ `Logistics Adapter Service (Query RajaOngkir API or Built-in Zone Tariff Engine)` ➔ `Return Available Services, Costs & ETD`.
+- **Alur Hybrid Checkout & Zero-Trust Shipping \[Diperbarui V2.0.0\]:** `Next.js API Client` ➔ `FastAPI Order Router` ➔ `FastAPI Service (Lock Stock + Compute Total Weight + Re-verify Shipping Cost via Logistics Service + Request Midtrans Snap Token with Shipping Line-Item)` ➔ `PostgreSQL`.
+- **Alur Fulfillment Resi Admin & Pelacakan Paket \[Ditambahkan V2.0.0\]:**
+  - _Fulfillment:_ `Next.js Admin UI (Input/Generate Resi)` ➔ `FastAPI Admin Router (PATCH /admin/orders/{id}/status)` ➔ `Validate FSM & Save tracking_number + shipped_at` ➔ `PostgreSQL`.
+  - _Tracking:_ `Next.js Order Detail UI` ➔ `FastAPI Logistics Router (GET /logistics/track/{order_id})` ➔ `Logistics Service (Build Chronological Tracking Manifest)` ➔ `Return Timeline Events`.
 - **Alur Webhook Asinkron:** `Payment Gateway (Midtrans)` ➔ `FastAPI Webhook Router` ➔ `FastAPI Service (Verify SHA-512 & Update Status/Stock)` ➔ `PostgreSQL`.
 
 ### 1.3 Representasi Arsitektur (Format AI-Readable Topology)
 
-Berikut adalah topologi arsitektur V1.3.0 yang dirancang agar dapat langsung dipahami oleh _AI Agent_ (Cursor/Cline) saat melakukan _monitored vibe coding_:
+Berikut adalah topologi arsitektur V2.0.0 yang dirancang agar dapat langsung dipahami oleh _AI Agent_ (Cursor/Cline) saat melakukan _monitored vibe coding_:
 
 ```text
 [Internet/Client & Store Admin]
@@ -64,25 +65,26 @@ Berikut adalah topologi arsitektur V1.3.0 yang dirancang agar dapat langsung dip
 │ │            /register, /orders/history, /orders/[id])             │
 │ ├─ src/app/admin/ (Backoffice CMS: /admin, /admin/products,        │
 │ │                  /admin/orders + Role Guard Layout)              │
-│ ├─ src/components/ (UI, ProductGallery, GoogleLoginBtn,            │
-│ │                   AdminSidebar, ImageUploader, KPICards)         │
-│ ├─ src/store/ (Zustand: useCartStore & useAuthStore)               │
-│ └─ src/lib/api.ts (HTTP Client + Bearer, Cookie & FormData)        │
+│ ├─ src/components/ (UI, ProductGallery, ShippingCalculator,        │
+│ │                   TrackingTimeline, AdminSidebar, ImageUploader) │
+│ ├─ src/store/ (Zustand: useCartStore [Weight] & useAuthStore)      │
+│ └─ src/lib/api.ts (HTTP Client + Logistics, Auth & Admin APIs)     │
 └─────────────────────────────┬──────────────────────────────────────┘
                               │ (REST API / JSON & Multipart + Credentials)
        ┌──────────────────────┼──────────────────────┐
-       │                      │ (Webhook HTTPS)      │ (OIDC & Storage HTTPS)
+       │                      │ (Webhook HTTPS)      │ (External HTTPS APIs)
        ▼                      ▼                      ▼
 ┌─────────────────────────────────────────────┐  ┌────────────────────────────┐
-│ BACKEND TIER (FastAPI / Python)             │  │ EXTERNAL CLOUD SERVICES    │
+│ BACKEND TIER (FastAPI / Python)             │  │ EXTERNAL CLOUD & 3PL APIs  │
 │ ├─ main.py & routers/ (Auth, Products,      │  │ ├─ Midtrans Snap API       │
 │ │                      Orders, Admin,       │  │ ├─ Google OAuth2/OIDC      │
-│ │                      Webhooks)            │  │ └─ Supabase Object Storage │
-│ ├─ security.py (JWT HS256, Bcrypt,          │  │    (Bucket: product-images)│
-│ │               Google OIDC, RBAC Guard)    │  └────────────────────────────┘
+│ │                      Logistics, Webhooks) │  │ ├─ Supabase Object Storage │
+│ ├─ logistics.py (Dual-Mode 3PL Adapter:     │  │ └─ RajaOngkir / 3PL API    │
+│ │                RajaOngkir + Zone Engine   │  │    (with Internal Fallback)│
+│ │                & Tracking Manifest Gen)   │  └────────────────────────────┘
+│ ├─ security.py (JWT HS256, Bcrypt, RBAC)    │
 │ ├─ storage.py (MIME Validator & S3 Uploader)│
-│ ├─ models.py (SQLAlchemy ORM Entities)      │
-│ ├─ schemas.py (Pydantic v2 DTOs)            │
+│ ├─ models.py & schemas.py (ORM & DTOs V2)   │
 │ └─ alembic/ (Database Migration Scripts)    │
 └─────────────────────────────┬───────────────┘
                               │ (TCP/IP Port 5432 / Pooler)
@@ -90,9 +92,9 @@ Berikut adalah topologi arsitektur V1.3.0 yang dirancang agar dapat langsung dip
 ┌────────────────────────────────────────────────────────────────────┐
 │ DATABASE TIER (PostgreSQL)                                         │
 │ ├─ Table: users (IAM & RBAC: CUSTOMER | ADMIN)                     │
-│ ├─ Table: products (Core Catalog + is_active Soft-Delete Flag)     │
+│ ├─ Table: products (Catalog + is_active + weight_grams)            │
 │ ├─ Table: product_images (1:N Gallery Relation -> CDN URLs)        │
-│ ├─ Table: orders (FSM Status: PENDING|PAID|SHIPPED|COMPLETED|...)  │
+│ ├─ Table: orders (FSM V2 + Shipping City/Courier/Cost/Tracking No) │
 │ ├─ Table: order_items (FK -> orders.id & products.id)              │
 │ └─ Table: alembic_version (Schema Migration Tracker)               │
 └────────────────────────────────────────────────────────────────────┘
@@ -104,7 +106,7 @@ Berikut adalah topologi arsitektur V1.3.0 yang dirancang agar dapat langsung dip
 
 Kontrak JSON di bawah ini menjadi acuan tunggal (_Single Source of Truth_) bagi AI Agent dalam men-_generate_ `schemas.py` (Pydantic) di FastAPI dan tipe data TypeScript di Next.js.
 
-#### A. DTO Modul Katalog & Multi-Gambar [Diperbarui V1.3.0]
+#### A. DTO Modul Katalog, Berat Produk & Multi-Gambar \[Diperbarui V2.0.0\]
 
 - **Product Image DTO (`ProductImageResponse` & `ProductImageInput`):**
 
@@ -126,6 +128,7 @@ Kontrak JSON di bawah ini menjadi acuan tunggal (_Single Source of Truth_) bagi 
   "description": "string | null",
   "price": "number (decimal)",
   "stock_quantity": "integer",
+  "weight_grams": "integer (default: 1000, > 0)",
   "image_url": "string | null (Primary thumbnail fallback)",
   "is_active": "boolean (true = tampil di katalog, false = diarsipkan)",
   "images": [
@@ -139,52 +142,79 @@ Kontrak JSON di bawah ini menjadi acuan tunggal (_Single Source of Truth_) bagi 
 }
 ```
 
-#### B. DTO Modul Identitas & Autentikasi / IAM
+#### B. DTO Modul Logistik 3PL, Kalkulasi Ongkir & Pelacakan Resi \[Ditambahkan V2.0.0\]
 
-- **User Register Request DTO (`UserRegisterRequest`):**
-
-```json
-{
-  "full_name": "string (min 3 chars, no HTML tags)",
-  "email": "string (valid email format)",
-  "password": "string (min 8 chars, alphanumeric)"
-}
-```
-
-- **User Login Request DTO (`UserLoginRequest`):**
+- **Province & City Directory DTO (`ProvinceDTO` & `CityDTO`):**
 
 ```json
 {
-  "email": "string (valid email format)",
-  "password": "string"
+  "province_id": "string",
+  "province_name": "string",
+  "city_id": "string",
+  "city_name": "string (e.g., 'Kota Surabaya')",
+  "type": "Kota | Kabupaten",
+  "postal_code": "string"
 }
 ```
 
-- **Google SSO Request DTO (`GoogleAuthRequest`):**
+- **Shipping Rate Calculation Request DTO (`ShippingRateRequest`):**
 
 ```json
 {
-  "id_token": "string (Google OIDC JWT)"
+  "destination_city_id": "string",
+  "weight_grams": "integer (> 0)",
+  "courier_code": "jne | jnt | sicepat | pos"
 }
 ```
 
-- **Auth Token & User Response DTO (`AuthResponse`):**
+- **Shipping Rate Calculation Response DTO (`ShippingRateResponse`):**
 
 ```json
 {
-  "access_token": "string (JWT HS256)",
-  "token_type": "bearer",
-  "user": {
-    "id": "uuid",
-    "email": "string",
-    "full_name": "string",
-    "role": "CUSTOMER | ADMIN",
-    "auth_provider": "LOCAL | GOOGLE"
-  }
+  "origin_city": "string (Default: 'Jakarta Pusat')",
+  "destination_city": "CityDTO",
+  "weight_grams": "integer",
+  "chargeable_weight_kg": "integer",
+  "courier_code": "string",
+  "courier_name": "string",
+  "services": [
+    {
+      "service": "string (e.g., 'REG', 'YES', 'ECO')",
+      "description": "string (e.g., 'Layanan Reguler')",
+      "cost": "number (decimal IDR)",
+      "etd": "string (e.g., '2-3 Hari')"
+    }
+  ]
 }
 ```
 
-#### C. DTO Modul Checkout & Pemesanan [Diperbarui V1.3.0]
+- **Parcel Tracking Manifest Response DTO (`ShipmentTrackingResponse`):**
+
+```json
+{
+  "order_id": "uuid",
+  "tracking_number": "string | null",
+  "courier_code": "string",
+  "courier_name": "string",
+  "courier_service": "string",
+  "status": "PENDING | PAID | SHIPPED | COMPLETED | CANCELLED",
+  "origin": "string ('Warehouse Amba Shop - Jakarta Pusat')",
+  "destination": "string (Customer Name, City, Province)",
+  "shipped_at": "string (ISO-8601) | null",
+  "completed_at": "string (ISO-8601) | null",
+  "manifest": [
+    {
+      "timestamp": "string (ISO-8601)",
+      "status_title": "string",
+      "description": "string",
+      "city": "string",
+      "is_current": "boolean"
+    }
+  ]
+}
+```
+
+#### C. DTO Modul Checkout & Pemesanan dengan Logistik \[Diperbarui V2.0.0\]
 
 - **Cart Checkout DTO (`CheckoutRequest`):**
 
@@ -193,7 +223,13 @@ Kontrak JSON di bawah ini menjadi acuan tunggal (_Single Source of Truth_) bagi 
   "customer_name": "string",
   "customer_email": "string (format email)",
   "customer_phone": "string (numeric)",
+  "shipping_province": "string",
+  "shipping_city_id": "string",
+  "shipping_city_name": "string",
+  "shipping_postal_code": "string",
   "shipping_address": "string",
+  "courier_code": "jne | jnt | sicepat | pos",
+  "courier_service": "string (e.g., 'REG')",
   "items": [
     {
       "product_id": "uuid",
@@ -212,8 +248,20 @@ Kontrak JSON di bawah ini menjadi acuan tunggal (_Single Source of Truth_) bagi 
   "customer_name": "string",
   "customer_email": "string",
   "customer_phone": "string",
+  "shipping_province": "string | null",
+  "shipping_city_id": "string | null",
+  "shipping_city_name": "string | null",
+  "shipping_postal_code": "string | null",
   "shipping_address": "string",
-  "total_amount": "number (decimal)",
+  "courier_code": "string | null",
+  "courier_service": "string | null",
+  "shipping_etd": "string | null",
+  "shipping_weight_grams": "integer",
+  "shipping_cost": "number (decimal)",
+  "tracking_number": "string | null",
+  "shipped_at": "string (ISO-8601) | null",
+  "completed_at": "string (ISO-8601) | null",
+  "total_amount": "number (decimal - subtotal items + shipping_cost)",
   "status": "PENDING | PAID | SHIPPED | COMPLETED | CANCELLED",
   "payment_gateway_ref": "string | null (Midtrans Snap Token)",
   "created_at": "string (ISO-8601 timestamp)",
@@ -221,7 +269,8 @@ Kontrak JSON di bawah ini menjadi acuan tunggal (_Single Source of Truth_) bagi 
     {
       "id": "uuid",
       "product_id": "uuid",
-      "product_name": "string (optional enriched field)",
+      "product_name": "string",
+      "product_image": "string | null",
       "quantity": "integer",
       "price_at_purchase": "number (decimal)"
     }
@@ -229,7 +278,7 @@ Kontrak JSON di bawah ini menjadi acuan tunggal (_Single Source of Truth_) bagi 
 }
 ```
 
-#### D. DTO Modul Dashboard Admin, Analitik & Cloud Upload [Ditambahkan V1.3.0]
+#### D. DTO Modul Dashboard Admin, Katalog & Resi Pengiriman \[Diperbarui V2.0.0\]
 
 - **Admin Create / Update Product DTO (`ProductAdminWriteRequest`):**
 
@@ -239,6 +288,7 @@ Kontrak JSON di bawah ini menjadi acuan tunggal (_Single Source of Truth_) bagi 
   "description": "string | null",
   "price": "number (decimal > 0)",
   "stock_quantity": "integer (>= 0)",
+  "weight_grams": "integer (> 0, default: 1000)",
   "is_active": "boolean (default: true)",
   "image_url": "string | null",
   "images": [
@@ -251,64 +301,18 @@ Kontrak JSON di bawah ini menjadi acuan tunggal (_Single Source of Truth_) bagi 
 }
 ```
 
-- **Admin Order Status Mutation DTO (`OrderStatusUpdateRequest`):**
+- **Admin Order Status & Tracking Mutation DTO (`OrderStatusUpdateRequest`):**
 
 ```json
 {
-  "status": "SHIPPED | COMPLETED | CANCELLED"
-}
-```
-
-- **Cloud Image Upload Response DTO (`ImageUploadResponse`):**
-
-```json
-{
-  "image_url": "string (Public Supabase Storage CDN URL)",
-  "filename": "string (UUID-sanitized object key)",
-  "content_type": "string (image/jpeg | image/png | image/webp)",
-  "size_bytes": "integer"
-}
-```
-
-- **Executive Analytics Summary DTO (`AdminAnalyticsResponse`):**
-
-```json
-{
-  "total_revenue": "number (decimal - sum of PAID, SHIPPED, COMPLETED orders)",
-  "total_orders": "integer",
-  "orders_by_status": {
-    "PENDING": "integer",
-    "PAID": "integer",
-    "SHIPPED": "integer",
-    "COMPLETED": "integer",
-    "CANCELLED": "integer"
-  },
-  "conversion_rate": "number (float percentage 0-100)",
-  "active_products_count": "integer",
-  "archived_products_count": "integer",
-  "low_stock_products": [
-    {
-      "id": "uuid",
-      "name": "string",
-      "stock_quantity": "integer",
-      "price": "number (decimal)",
-      "image_url": "string | null"
-    }
-  ],
-  "top_selling_products": [
-    {
-      "product_id": "uuid",
-      "name": "string",
-      "total_sold": "integer",
-      "total_revenue": "number (decimal)"
-    }
-  ]
+  "status": "SHIPPED | COMPLETED | CANCELLED",
+  "tracking_number": "string | null (Required or auto-generated when status == 'SHIPPED')"
 }
 ```
 
 ### 2.2 Desain Skema Fisik (Physical Database Schema)
 
-Skema fisik di PostgreSQL dikawal ketat oleh konstrain kunci asing (_Foreign Keys_), indeks pencarian cepat (_B-Tree Index_), dan dikelola evolusinya melalui **Alembic**.
+Skema fisik di PostgreSQL dikawal ketat oleh konstrain kunci asing (_Foreign Keys_), indeks pencarian cepat (_B-Tree Index_), dan dikelola evolusinya secara non-destruktif melalui **Alembic**.
 
 1. **Tabel: `users`**
    - `id` (UUID, Primary Key, Default: `uuid_generate_v4()`)
@@ -320,14 +324,15 @@ Skema fisik di PostgreSQL dikawal ketat oleh konstrain kunci asing (_Foreign Key
    - `is_active` (BOOLEAN, NOT NULL, Default: `TRUE`)
    - `created_at` (TIMESTAMPTZ, NOT NULL, Default: `NOW()`)
 
-2. **Tabel: `products` \[Dimodifikasi V1.3.0\]**
+2. **Tabel: `products` \[Dimodifikasi V2.0.0\]**
    - `id` (UUID, Primary Key, Auto-gen v4)
    - `name` (VARCHAR 255, NOT NULL)
    - `description` (TEXT, Nullable)
    - `price` (NUMERIC 12,2, NOT NULL, Check: `>= 0`)
    - `stock_quantity` (INTEGER, NOT NULL, Check: `>= 0`)
-   - `image_url` (VARCHAR 500, Nullable — _Disinkronkan otomatis dengan gambar utama di `product_images`_)
-   - `is_active` (BOOLEAN, NOT NULL, Default: `TRUE`, **INDEXED**) **\[Kolom Baru V1.3.0 — Penanda Soft-Delete/Arsip Katalog\]**
+   - `weight_grams` (INTEGER, NOT NULL, Default: `1000`, Server Default: `'1000'`, Check: `> 0`) **\[Kolom Baru V2.0.0 — Berat Satuan Produk dalam Gram\]**
+   - `image_url` (VARCHAR 500, Nullable)
+   - `is_active` (BOOLEAN, NOT NULL, Default: `TRUE`, **INDEXED**)
    - `created_at` (TIMESTAMPTZ, Default: `NOW()`)
 
 3. **Tabel: `product_images`**
@@ -338,15 +343,27 @@ Skema fisik di PostgreSQL dikawal ketat oleh konstrain kunci asing (_Foreign Key
    - `display_order` (INTEGER, NOT NULL, Default: `0`)
    - `created_at` (TIMESTAMPTZ, NOT NULL, Default: `NOW()`)
 
-4. **Tabel: `orders` \[Diperluas Enum Status V1.3.0\]**
+4. **Tabel: `orders` \[Dimodifikasi V2.0.0\]**
    - `id` (UUID, Primary Key, Auto-gen v4)
    - `user_id` (UUID, **NULLABLE**, **INDEXED**) ➔ **Foreign Key** (`users.id`) `ON DELETE SET NULL`
    - `customer_name` (VARCHAR 255, NOT NULL)
    - `customer_email` (VARCHAR 255, NOT NULL)
    - `customer_phone` (VARCHAR 50, NOT NULL)
+   - `shipping_province` (VARCHAR 100, **NULLABLE**) **\[Kolom Baru V2.0.0\]**
+   - `shipping_city_id` (VARCHAR 50, **NULLABLE**) **\[Kolom Baru V2.0.0\]**
+   - `shipping_city_name` (VARCHAR 100, **NULLABLE**) **\[Kolom Baru V2.0.0\]**
+   - `shipping_postal_code` (VARCHAR 20, **NULLABLE**) **\[Kolom Baru V2.0.0\]**
    - `shipping_address` (TEXT, NOT NULL)
-   - `total_amount` (NUMERIC 12,2, NOT NULL, Check: `>= 0`)
-   - `status` (VARCHAR 50, NOT NULL, Default: `'PENDING'` — **\[Diperbarui V1.3.0\]** _Nilai yang diizinkan: `'PENDING'`, `'PAID'`, `'SHIPPED'`, `'COMPLETED'`, `'CANCELLED'`_)
+   - `courier_code` (VARCHAR 50, **NULLABLE**) **\[Kolom Baru V2.0.0 — e.g., `'jne'`, `'jnt'`, `'sicepat'`, `'pos'`\]**
+   - `courier_service` (VARCHAR 100, **NULLABLE**) **\[Kolom Baru V2.0.0 — e.g., `'REG'`, `'YES'`\]**
+   - `shipping_etd` (VARCHAR 50, **NULLABLE**) **\[Kolom Baru V2.0.0 — e.g., `'2-3 Hari'`\]**
+   - `shipping_weight_grams` (INTEGER, NOT NULL, Default: `1000`, Server Default: `'1000'`) **\[Kolom Baru V2.0.0\]**
+   - `shipping_cost` (NUMERIC 12,2, NOT NULL, Default: `0.00`, Server Default: `'0.00'`) **\[Kolom Baru V2.0.0\]**
+   - `tracking_number` (VARCHAR 100, **NULLABLE**, **INDEXED**) **\[Kolom Baru V2.0.0 — Nomor Resi Pengiriman\]**
+   - `shipped_at` (TIMESTAMPTZ, **NULLABLE**) **\[Kolom Baru V2.0.0\]**
+   - `completed_at` (TIMESTAMPTZ, **NULLABLE**) **\[Kolom Baru V2.0.0\]**
+   - `total_amount` (NUMERIC 12,2, NOT NULL, Check: `>= 0` — _Subtotal Barang + `shipping_cost`_)
+   - `status` (VARCHAR 50, NOT NULL, Default: `'PENDING'`)
    - `payment_gateway_ref` (VARCHAR 255, Nullable)
    - `created_at` (TIMESTAMPTZ, Default: `NOW()`)
 
@@ -361,181 +378,120 @@ Skema fisik di PostgreSQL dikawal ketat oleh konstrain kunci asing (_Foreign Key
 
 ### 3.1 Antarmuka Antar-Modul (Internal API Contracts)
 
-#### A. Endpoint Katalog Publik & Multi-Gambar \[Diperbarui V1.3.0\]
+#### A. Endpoint Katalog Publik & Multi-Gambar
 
-- **API 1: Pengambilan Daftar Produk Aktif**
-  - **Endpoint:** `GET /api/v1/products`
-  - **Proses:** Mengambil semua produk yang memiliki `is_active == True` beserta relasi `images` menggunakan `selectinload(Product.images)`.
-  - **Output (Success):** `HTTP 200 OK` (Array of `ProductResponse`).
-- **API 2: Pengambilan Detail Produk Spesifik**
-  - **Endpoint:** `GET /api/v1/products/{product_id}`
-  - **Proses:** Mengambil satu produk aktif berdasarkan UUID beserta daftar `product_images` yang telah diurutkan berdasarkan `is_primary DESC, display_order ASC`.
-  - **Output (Success):** `HTTP 200 OK` (`ProductResponse`).
-  - **Output (Error):** `HTTP 404 Not Found` jika UUID produk tidak ditemukan atau berstatus `is_active == False`.
+- **API 1 & API 2:** `GET /api/v1/products` dan `GET /api/v1/products/{product_id}` (Mengembalikan `ProductResponse` yang kini mencakup `weight_grams`).
 
 #### B. Endpoint Manajemen Identitas / IAM
 
 - **API 3 s.d. API 7:** `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/google`, `/api/v1/auth/refresh`, `/api/v1/auth/me`, dan `/api/v1/auth/logout`.
 
-#### C. Endpoint Pemesanan & Riwayat Transaksi Pelanggan
+#### C. Endpoint Pemesanan & Riwayat Transaksi Pelanggan \[Diperbarui V2.0.0\]
 
-- **API 8: Inisiasi Pemesanan (Hybrid Checkout)**
+- **API 8: Inisiasi Pemesanan dengan Verifikasi Ongkir (Hybrid Zero-Trust Checkout)**
   - **Endpoint:** `POST /api/v1/orders/checkout`
-  - **Proses:** Memvalidasi ketersediaan stok dan memastikan `product.is_active == True` dengan _Pessimistic Locking_, mengaitkan `user_id` secara opsional, dan menerbitkan Snap Token Midtrans.
+  - **Proses:**
+    1. Mengunci baris produk (`.with_for_update()`), memvalidasi stok dan `is_active == True`.
+    2. Menghitung $\text{subtotal} = \sum (q_i \times p_i)$ dan berat total $W_{\text{total}} = \sum (q_i \times w_i)$.
+    3. Memanggil `calculate_shipping_cost(shipping_city_id, W_total, courier_code, courier_service)` di sisi server untuk menetapkan `shipping_cost` dan `shipping_etd`.
+    4. Menetapkan $\text{total\_amount} = \text{subtotal} + \text{shipping\_cost}$, menyimpan `Order` beserta metadata logistik, dan menyisipkan objek `{"id": "SHIPPING-FEE", "price": int(shipping_cost), "quantity": 1, "name": "Ongkir ..."}` ke dalam `item_details` permintaan Midtrans Snap.
+  - **Output (Success):** `HTTP 201 Created` (`OrderResponse`).
 - **API 9: Riwayat & Detail Pesanan Pelanggan**
-  - **Endpoint:** `GET /api/v1/orders/me` (Butuh `get_current_user`) & `GET /api/v1/orders/{order_id}` (Dilindungi isolasi kepemilikan akun sehingga pelanggan A tidak dapat mengintip pesanan pelanggan B, kecuali diakses oleh `ADMIN`).
+  - **Endpoint:** `GET /api/v1/orders/me` & `GET /api/v1/orders/{order_id}`.
 
-#### D. Endpoint Administrasi & CMS Internal (`/api/v1/admin/*`) \[Ditambahkan V1.3.0\]
+#### D. Endpoint Administrasi & CMS Internal (`/api/v1/admin/*`) \[Diperbarui V2.0.0\]
 
-_Catatan Keamanan: Seluruh endpoint di bawah ini wajib dikunci dengan dependency `Depends(require_role("ADMIN"))`. Permintaan tanpa token merespons `401 Unauthorized`, sedangkan permintaan dengan token `CUSTOMER` merespons `403 Forbidden`._
-
-- **API 10: Ringkasan Analitik Eksekutif**
-  - **Endpoint:** `GET /api/v1/admin/analytics/summary`
-  - **Proses:** Mengeksekusi agregasi SQL untuk menghitung total pendapatan lunas, distribusi status pesanan, rasio konversi, daftar produk dengan stok $\le 5$, dan 5 produk terlaris.
-  - **Output (Success):** `HTTP 200 OK` (`AdminAnalyticsResponse`).
-- **API 11: Daftar Seluruh Katalog Produk (Admin View)**
-  - **Endpoint:** `GET /api/v1/admin/products`
-  - **Query Params Opsional:** `include_inactive: bool = True`, `search: str = ""`
-  - **Proses:** Mengambil seluruh produk (baik `is_active = True` maupun `False`) beserta galeri gambarnya menggunakan `selectinload(Product.images)` yang diurutkan dari `created_at DESC`.
-  - **Output (Success):** `HTTP 200 OK` (Array of `ProductResponse`).
-- **API 12: Pembuatan Produk Baru & Galeri Multi-Gambar**
-  - **Endpoint:** `POST /api/v1/admin/products`
-  - **Input Body:** `ProductAdminWriteRequest`.
-  - **Proses:** Membuat entitas `Product` baru, menyinkronkan kolom `image_url` utama, dan menyimpan daftar `ProductImage` terkait dalam satu transaksi database.
-  - **Output (Success):** `HTTP 201 Created` (`ProductResponse`).
-- **API 13: Pembaruan Produk, Stok & Galeri Multi-Gambar**
-  - **Endpoint:** `PUT /api/v1/admin/products/{product_id}`
-  - **Input Body:** `ProductAdminWriteRequest`.
-  - **Proses:** Memperbarui data produk, mengganti/menyinkronkan koleksi `product_images` secara atomik, dan memastikan tepat satu gambar ditandai sebagai `is_primary = True`.
-  - **Output (Success):** `HTTP 200 OK` (`ProductResponse`).
-- **API 14: Pengarsipan Produk (Soft-Delete)**
-  - **Endpoint:** `DELETE /api/v1/admin/products/{product_id}`
-  - **Proses:** Mengubah `product.is_active = False` dan menyimpan perubahan tanpa menghapus baris dari tabel `products` agar referensi kunci asing pada `order_items` tetap utuh.
-  - **Output (Success):** `HTTP 200 OK` (`{"status": "archived", "product_id": "uuid", "is_active": false}`).
-- **API 15: Unggah Berkas Gambar ke Cloud Object Storage**
-  - **Endpoint:** `POST /api/v1/admin/upload`
-  - **Proteksi:** `Depends(require_role("ADMIN"))` + _Rate Limiter_ (`20/minute` per IP).
-  - **Headers:** `Content-Type: multipart/form-data`.
-  - **Input Form:** `file: UploadFile`.
-  - **Proses:** Memvalidasi tipe konten (`image/jpeg`, `image/png`, `image/webp`) dan ukuran berkas ($\le 5\text{ MB}$), mengunggah biner ke Supabase Storage Bucket `product-images` (atau penyimpanan statis lokal terisolasi saat mode _offline fallback_), dan mengembalikan URL publiknya.
-  - **Output (Success):** `HTTP 201 Created` (`ImageUploadResponse`).
-  - **Output (Error):** `HTTP 400 Bad Request` (tipe berkas tidak didukung) atau `HTTP 413 Content Too Large` (ukuran $> 5\text{ MB}$).
-- **API 16: Daftar Seluruh Pesanan Pelanggan (Admin View)**
-  - **Endpoint:** `GET /api/v1/admin/orders`
-  - **Query Params Opsional:** `status_filter: Optional[str] = None`, `search: Optional[str] = None`.
-  - **Proses:** Mengambil daftar seluruh pesanan pelanggan (Member maupun Guest) beserta `Order.items` menggunakan `selectinload`, diurutkan dari `created_at DESC`.
-  - **Output (Success):** `HTTP 200 OK` (Array of `OrderResponse`).
-- **API 17: Pembaruan Status Pemenuhan Pesanan (Order Fulfillment FSM)**
+- **API 10 s.d. API 16:** `/api/v1/admin/analytics/summary`, `GET/POST/PUT/DELETE /api/v1/admin/products` (mendukung penyimpanan `weight_grams`), `POST /api/v1/admin/upload`, dan `GET /api/v1/admin/orders`.
+- **API 17: Pembaruan Status Pemenuhan Pesanan & Input Resi (Order Fulfillment FSM V2)**
   - **Endpoint:** `PATCH /api/v1/admin/orders/{order_id}/status`
-  - **Input Body:** `OrderStatusUpdateRequest` (`{"status": "SHIPPED" | "COMPLETED" | "CANCELLED"}`).
-  - **Proses:** Memvalidasi transisi status menggunakan aturan _Finite State Machine_ (FSM). Jika transisi dari `PENDING` ke `CANCELLED`, sistem mengembalikan stok produk (`product.stock_quantity += item.quantity`) dengan penguncian `.with_for_update()`.
+  - **Input Body:** `OrderStatusUpdateRequest` (`{"status": "SHIPPED" | "COMPLETED" | "CANCELLED", "tracking_number": "..."}`).
+  - **Proses:**
+    - Memvalidasi transisi FSM.
+    - Jika `status == "SHIPPED"`, simpan `tracking_number` (atau _auto-generate_ nomor resi berformat `AMBA-{COURIER}-{YYYYMMDD}-{RANDOM}` jika `tracking_number` kosong) dan set `order.shipped_at = datetime.now(timezone.utc)`.
+    - Jika `status == "COMPLETED"`, set `order.completed_at = datetime.now(timezone.utc)`.
   - **Output (Success):** `HTTP 200 OK` (`OrderResponse`).
-  - **Output (Error):** `HTTP 400 Bad Request` jika transisi status melanggar aturan FSM.
+
+#### E. Endpoint Logistik 3PL, Kalkulasi Ongkir & Pelacakan Resi (`/api/v1/logistics/*`) \[Ditambahkan V2.0.0\]
+
+- **API 18: Daftar Direktori Provinsi Indonesia**
+  - **Endpoint:** `GET /api/v1/logistics/provinces`
+  - **Output (Success):** `HTTP 200 OK` (Array of `ProvinceDTO`).
+- **API 19: Daftar Direktori Kota/Kabupaten Berdasarkan Provinsi**
+  - **Endpoint:** `GET /api/v1/logistics/cities`
+  - **Query Params Opsional:** `province_id: Optional[str] = None`
+  - **Output (Success):** `HTTP 200 OK` (Array of `CityDTO`).
+- **API 20: Kalkulasi Tarif Ongkos Kirim Multi-Kurir**
+  - **Endpoint:** `POST /api/v1/logistics/rates`
+  - **Input Body:** `ShippingRateRequest` (`destination_city_id`, `weight_grams`, `courier_code`).
+  - **Output (Success):** `HTTP 200 OK` (`ShippingRateResponse` berisi daftar layanan `REG`, `YES/BEST`, `ECO/OKE` beserta tarif dan ETD).
+- **API 21: Pelacakan Manifes Perjalanan Paket (Parcel Tracking Timeline)**
+  - **Endpoint:** `GET /api/v1/logistics/track/{order_id}`
+  - **Proteksi:** Menggunakan `get_optional_user` dengan validasi isolasi kepemilikan pesanan (identik dengan proteksi `GET /api/v1/orders/{order_id}`).
+  - **Output (Success):** `HTTP 200 OK` (`ShipmentTrackingResponse`).
 
 ### 3.2 Antarmuka Subsistem Eksternal (External Systems Contracts)
 
-- **EXT-API-01: Payment Gateway Webhook (Inbound - Midtrans)**
-  - **Protokol:** HTTPS POST ke `POST /api/v1/webhooks/midtrans` dengan verifikasi `SHA-512`.
-- **EXT-API-02: Google Identity Services OIDC Verification**
-  - **Protokol:** HTTPS menggunakan `google.oauth2.id_token.verify_oauth2_token`.
-- **EXT-API-03: Supabase Storage / S3-Compatible Object Storage API \[Ditambahkan V1.3.0\]**
-  - **Protokol:** HTTPS POST/PUT ke `https://<project_ref>.supabase.co/storage/v1/object/product-images/<uuid_filename>` menggunakan header `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>` dan `apikey: <SUPABASE_SERVICE_ROLE_KEY>`.
-  - **Public URL Pattern:** `https://<project_ref>.supabase.co/storage/v1/object/public/product-images/<uuid_filename>`.
+- **EXT-API-01: Payment Gateway Webhook & Snap API (Midtrans):** Menyertakan item biaya pengiriman di dalam `item_details` agar jumlah total item sama persis dengan `transaction_details.gross_amount`.
+- **EXT-API-02: Google Identity Services OIDC Verification.**
+- **EXT-API-03: Supabase Storage / S3-Compatible Object Storage API.**
+- **EXT-API-04: Hybrid 3PL Logistics Gateway (RajaOngkir REST API + Built-in Fallback Adapter) \[Ditambahkan V2.0.0\]**
+  - **Protokol:** HTTPS POST ke `https://api.rajaongkir.com/starter/cost` (atau _endpoint_ Komerce/RajaOngkir V2) dengan parameter `origin`, `destination`, `weight`, dan `courier`.
+  - **Mekanisme Failover:** Modul `backend/logistics.py` membungkus panggilan eksternal di dalam blok `try...except httpx.HTTPError`. Apabila `RAJAONGKIR_API_KEY` tidak disetel atau API eksternal merespons di luar `200 OK`, _Adapter_ langsung mengeksekusi perhitungan tarif berbasis matriks zona geografis Indonesia secara deterministik tanpa jeda.
 
 ## BAB 4: DESAIN KOMPONEN DAN ALGORITMA (COMPONENT SELECTION AND DESIGN)
 
 ### 4.1 Pemilihan Komponen Pakai Ulang (Reusable Components)
 
-1. **Frontend (Next.js):**
-   - **State Management:** `Zustand` (`useCartStore` & `useAuthStore`).
-   - **Form Validation:** `Zod` + `React Hook Form`.
-   - **Google OAuth SDK:** `@react-oauth/google`.
-   - **UI Icons & Feedback:** `lucide-react` (Ikon navigasi Admin, KPI, dan status pengiriman) + `sonner` (Toast notifications).
-2. **Backend (FastAPI):**
-   - **Database ORM & Migration:** `SQLAlchemy 2.0` + `Alembic`.
-   - **Schema Validation:** `Pydantic v2` + `pydantic[email]`.
-   - **Multipart File Handling & Cloud Upload \[Ditambahkan V1.3.0\]:** `python-multipart` (untuk parsing `UploadFile` di FastAPI) dan `httpx` (untuk komunikasi asinkron/sinkron berkinerja tinggi ke REST API Supabase Storage tanpa membebani ukuran bundel Serverless Vercel).
-   - **Security & Cryptography:** `passlib[bcrypt]`, `bcrypt==4.0.1`, `PyJWT`, `google-auth`, dan `SlowAPI`.
+1. **Frontend (Next.js):** `Zustand`, `Zod` + `React Hook Form`, `@react-oauth/google`, `lucide-react` (Ikon truk pengiriman, kotak paket, lencana resi, dan _stepper timeline_), serta `sonner`.
+2. **Backend (FastAPI):** `SQLAlchemy 2.0` + `Alembic`, `Pydantic v2`, `python-multipart`, `httpx` (Klien HTTP untuk Midtrans, Supabase Storage, dan RajaOngkir 3PL API), `passlib[bcrypt]`, `PyJWT`, `google-auth`, dan `SlowAPI`.
 
 ### 4.2 Rancangan Algoritmik Matematis (Kompleksitas & Logika Inti)
 
-#### A. Algoritma 1: Validasi Harga Keranjang & Konfirmasi Stok (Pessimistic Locking)
+#### A. Algoritma 1: Kalkulasi Harga & Ongkos Kirim Zero-Trust dengan Pembulatan Bobot (V2.0.0) \[Diperbarui V2.0.0\]
 
-1. Ekstrak identitas pengguna secara opsional dari header JWT ($O(1)$).
-2. Lakukan kueri `SELECT ... FOR UPDATE` pada tabel `products` untuk mengunci baris produk yang dibeli, memvalidasi `is_active == True`, dan mencegah _race condition_.
-3. Hitung ulang harga secara tertutup di server: $\text{total\_amount} = \sum (\text{item\_qty} \times \text{db\_price})$.
-4. Kurangi stok, simpan `Order` dan `OrderItem`, minta token Midtrans Snap, lalu _commit_ transaksi secara atomik.
+1. Kunci baris produk yang dipesan dengan `SELECT ... FOR UPDATE`.
+2. Hitung subtotal barang dan bobot fisik total keranjang:
+   $$\text{Subtotal} = \sum_{i=1}^{n} (q_i \times p_i), \quad W_{\text{total}} = \sum_{i=1}^{n} (q_i \times w_i)$$
+3. Hitung bobot tagihan ekspedisi dalam satuan kilogram dengan fungsi _ceiling_ ($\lceil \cdot \rceil$):
+   $$W_{\text{kg}} = \max\left(1, \left\lceil \frac{W_{\text{total}}}{1000} \right\rceil\right)$$
+4. Hitung biaya pengiriman berdasarkan tarif dasar kota tujuan ($R_{\text{dest}}$), faktor pengali kurir ($\alpha_{\text{courier}}$), dan faktor kelas layanan ($\beta_{\text{service}}$):
+   $$\text{Shipping Cost} = W_{\text{kg}} \times \text{round\_to\_500}\left(R_{\text{dest}} \times \alpha_{\text{courier}} \times \beta_{\text{service}}\right)$$
+5. Tetapkan total tagihan akhir secara atomik:
+   $$\text{Total Amount} = \text{Subtotal} + \text{Shipping Cost}$$
 
-- **Time Complexity:** $\approx O(n \log N)$ | **Space Complexity:** $O(n)$
+- **Time Complexity:** $O(n \log N)$ untuk penguncian baris basis data dan $O(1)$ untuk kalkulasi tarif logistik.
 
-#### B. Algoritma 2: Eager Loading Galeri Multi-Gambar Anti N+1 Query
+#### B. Algoritma 2 s.d. Algoritma 4: Eager Loading (`selectinload`), Verifikasi JWT RBAC, & Agregasi Analitik SQL Satu Putaran.
 
-Menggunakan SQLAlchemy `selectinload(Product.images)` yang mengeksekusi tepat **2 kueri SQL** konstan ($O(1)$ _database round-trips_) berapapun jumlah produk $M$ yang dimuat.
+#### C. Algoritma 5: Transisi Finite State Machine (FSM V2) dengan Invarian Nomor Resi \[Diperbarui V2.0.0\]
 
-#### C. Algoritma 3: Verifikasi Kriptografi JWT & RBAC Guard
+Transisi status pesanan $\delta(s_{\text{current}}, \text{payload}) \rightarrow s_{\text{target}}$ diperketat dengan syarat invarian logistik:
 
-Memverifikasi tanda tangan HMAC-SHA256 pada token Bearer dan mengevaluasi klaim peran $\text{user.role} == \text{"ADMIN"}$ dalam waktu konstan $O(1)$.
-
-#### D. Algoritma 4: Agregasi Analitik Penjualan Real-Time Satu Putaran (Single-Pass SQL Aggregation) \[Ditambahkan V1.3.0\]
-
-Alih-alih menarik ribuan objek `Order` ke dalam memori Python yang memakan kompleksitas ruang $O(N_{\text{orders}})$, perhitungan metrik eksekutif diserahkan ke mesin pengoptimal PostgreSQL:
-
-1. **Perhitungan Revenue & Distribusi Status:**
-   $$\text{Gross Revenue} = \sum_{o \in \text{Orders}} \begin{cases} o.\text{total\_amount} & \text{jika } o.\text{status} \in \{\text{'PAID'}, \text{'SHIPPED'}, \text{'COMPLETED'}\} \\ 0 & \text{lainnya} \end{cases}$$
-2. **Perhitungan Rasio Konversi Transaksi ($\text{CR}$):**
-   $$\text{CR} = \left( \frac{N_{\text{PAID}} + N_{\text{SHIPPED}} + N_{\text{COMPLETED}}}{N_{\text{total\_orders}}} \right) \times 100\%$$
-3. **Agregasi Top 5 Produk Terlaris:**
-   Mengeksekusi `JOIN` antara `order_items`, `orders`, dan `products` dengan filter `orders.status IN ('PAID', 'SHIPPED', 'COMPLETED')`, dikelompokkan berdasarkan `product_id` (`GROUP BY`), diurutkan berdasarkan `SUM(order_items.quantity) DESC LIMIT 5`.
-
-- **Time Complexity:** $O(N_{\text{orders}})$ di tingkat pemindaian indeks C-engine PostgreSQL, dan **$O(1)$** di memori aplikasi Python.
-
-#### E. Algoritma 5: Transisi Finite State Machine (FSM) Pemenuhan Pesanan \[Ditambahkan V1.3.0\]
-
-Status pesanan dimodelkan sebagai graf berarah (_Directed Acyclic Graph_) dengan himpunan status $S = \{\text{PENDING}, \text{PAID}, \text{SHIPPED}, \text{COMPLETED}, \text{CANCELLED}\}$ dan fungsi transisi yang diizinkan $\delta$:
-
-- $\delta(\text{PENDING}) \rightarrow \{\text{PAID}, \text{CANCELLED}\}$ _(Transisi ke `CANCELLED` memicu pengembalian stok $\Delta \text{stock} = +q_i$)_
-- $\delta(\text{PAID}) \rightarrow \{\text{SHIPPED}\}$
-- $\delta(\text{SHIPPED}) \rightarrow \{\text{COMPLETED}\}$
-- $\delta(\text{COMPLETED}) \rightarrow \emptyset$ _(Terminal State)_
-- $\delta(\text{CANCELLED}) \rightarrow \emptyset$ _(Terminal State)_
-
-Setiap permintaan mutasi status $s_{\text{target}} \notin \delta(s_{\text{current}})$ langsung ditolak dalam waktu konstan **$O(1)$** sebelum menyentuh operasi tulis basis data.
+- $\delta(\text{PENDING}) \rightarrow \{\text{PAID}, \text{CANCELLED}\}$ _(Transisi ke `CANCELLED` mengembalikan stok $\Delta \text{stock} = +q_i$)_
+- $\delta(\text{PAID}) \rightarrow \{\text{SHIPPED}\}$ **syarat wajib:** $\text{len}(\text{tracking\_number}) \ge 6$ dan mencatat $\text{shipped\_at} = t_{\text{now}}$.
+- $\delta(\text{SHIPPED}) \rightarrow \{\text{COMPLETED}\}$ dan mencatat $\text{completed\_at} = t_{\text{now}}$.
+- $\delta(\text{COMPLETED}) \rightarrow \emptyset$ & $\delta(\text{CANCELLED}) \rightarrow \emptyset$ _(Terminal States)_.
 
 ## BAB 5: KOMPONEN SEKUNDER DAN OPERASIONAL EKOSISTEM
 
 ### 5.1 Pemilihan Teknologi & Konfigurasi Lingkungan (Environment Variables)
 
-Untuk mendukung fitur V1.3.0, variabel lingkungan berikut wajib dikonfigurasi:
-
 - **Backend (`.env` / Vercel Backend Environment):**
-  - `DATABASE_URL`: String koneksi PostgreSQL (Supabase Pooler/Direct).
-  - `MIDTRANS_SERVER_KEY` & `MIDTRANS_IS_PRODUCTION`: Kredensial pembayaran.
-  - `ALLOWED_ORIGINS`: Daftar domain frontend yang diizinkan oleh CORS.
-  - `JWT_SECRET_KEY`, `JWT_ALGORITHM` (`HS256`), `ACCESS_TOKEN_EXPIRE_MINUTES` (`30`), `REFRESH_TOKEN_EXPIRE_DAYS` (`7`).
-  - `GOOGLE_CLIENT_ID`: ID Klien OAuth 2.0 dari Google Cloud Console.
-  - **\[Baru V1.3.0\]** `SUPABASE_URL`: URL dasar proyek Supabase (contoh: `https://xyzcompany.supabase.co`).
-  - **\[Baru V1.3.0\]** `SUPABASE_SERVICE_ROLE_KEY`: Kunci rahasia _Service Role_ Supabase untuk mengizinkan _backend_ FastAPI mengunggah objek ke Supabase Storage.
-  - **\[Baru V1.3.0\]** `SUPABASE_STORAGE_BUCKET`: Nama _bucket_ publik penyimpanan gambar produk (Default: `product-images`).
+  - `DATABASE_URL`, `MIDTRANS_SERVER_KEY`, `MIDTRANS_IS_PRODUCTION`, `ALLOWED_ORIGINS`.
+  - `JWT_SECRET_KEY`, `JWT_ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`, `GOOGLE_CLIENT_ID`.
+  - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`.
+  - **\[Baru V2.0.0 - Opsional dengan Built-in Fallback\]** `RAJAONGKIR_API_KEY`: Kunci API RajaOngkir untuk mode kueri eksternal (jika kosong, sistem otomatis menggunakan _Built-in Indonesian Wilayah & Tariff Engine_).
+  - **\[Baru V2.0.0 - Opsional\]** `STORE_ORIGIN_CITY_ID`: ID kota gudang pengiriman asal (Default: `'152'` — Jakarta Pusat).
 - **Frontend (`.env.local` / Vercel Frontend Config):**
-  - `NEXT_PUBLIC_API_URL`: URL publik _backend_ FastAPI.
-  - `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY`: Kunci klien Midtrans Snap.
-  - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: ID Klien OAuth 2.0 publik.
+  - `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
 
 ### 5.2 Manajemen Konfigurasi dan Otomatisasi (CI/CD Pipeline)
 
 #### 5.2.1 Manajemen Versi & Migrasi Basis Data (Git & Alembic Governance)
 
-- **Aturan Penamaan Cabang V1.3.0:**
-  - `docs/srs-sdd-v1.3.0` (Pembaruan kontrak dokumen spesifikasi dan desain V1.3.0).
-  - `feature/admin-backend-api` (Sprint 13: Migrasi Alembic `is_active`, Storage Uploader, & Endpoint Admin).
-  - `feature/admin-dashboard-analytics` (Sprint 14: Admin Layout Shell, RBAC Guard UI, & Executive Analytics).
-  - `feature/admin-catalog-orders-ui` (Sprint 15: Product CRUD Modal, Multi-Image Uploader, & Order Fulfillment UI).
-- **Aturan Migrasi Skema:**
-  - Penambahan kolom `is_active` pada tabel `products` wajib menggunakan `server_default=sa.text('true')` pada skrip Alembic agar seluruh baris produk yang sudah ada di database lokal maupun produksi otomatis bernilai `TRUE` tanpa mengalami kegagalan `NotNullViolation`.
-
-#### 5.2.2 Pembangunan Sistem & Integrasi (System Building & Automation)
-
-Otomatisasi perakitan perangkat lunak ditangani oleh GitHub Actions dan Vercel CD:
-
-- **Backend Dependency Integrity:** File `backend/requirements.txt` wajib dijaga dalam format pengkodean **UTF-8** murni dan menyertakan `python-multipart` untuk mendukung fitur unggah berkas di lingkungan _Serverless_ Vercel.
-- **Build Validation:** Mengeksekusi `npm run build` untuk memastikan seluruh rute baru (`/admin`, `/admin/products`, `/admin/orders`) bebas dari _error_ tipe data TypeScript dan siap dirilis ke produksi.
+- **Aturan Penamaan Cabang V2.0.0:**
+  - `docs/srs-sdd-v2.0.0` (Pembaruan dokumen kontrak spesifikasi dan desain V2.0.0).
+  - `feature/logistics-3pl-backend` (Sprint 17: Migrasi Alembic V2.0.0, Modul `logistics.py`, Endpoint Ongkir/Tracking, & Zero-Trust Checkout V2).
+  - `feature/checkout-shipping-ui` (Sprint 18: Kalkulator Ongkir Dinamis `/cart`, Pemilih Provinsi/Kota/Kurir, & Manajemen Berat Produk Admin).
+  - `feature/order-tracking-timeline` (Sprint 19: Input/Generator Resi Admin & Visual Parcel Tracking Timeline Pelanggan).
+  - `docs/release-v2.0.0` (Sprint 20: Migrasi Produksi V2.0.0, End-to-End QA, Pengesahan Dokumen, & Tag Rilis Mayor `v2.0.0`).
