@@ -9,10 +9,10 @@
 | 1.0.0 | 12 Okt 2026 | M. Iqbal Ababil | Inisialisasi MVP, Guest Checkout, Midtrans Snap.                                                                                                                                                     | Dirilis |
 | 1.1.0 | 16 Okt 2026 | M. Iqbal Ababil | Refactoring UI/UX (CRO Pattern, Brand Color 'Tech Violet'), Security Audit (CORS Regex, Rate Limiting, XSS Validation).                                                                              | Dirilis |
 | 1.2.0 | 19 Okt 2026 | M. Iqbal Ababil | Penambahan Modul IAM (Login/Register JWT, Google SSO OIDC, RBAC), Galeri Multi-Gambar Produk (`product_images`), Member Checkout & Riwayat Pesanan, Migrasi DB.                                      | Dirilis |
-| 1.3.0 | 21 Okt 2026 | M. Iqbal Ababil | DRAF: Modul Dashboard Admin (CMS Internal), Analitik Penjualan Eksekutif, Manajemen Katalog CRUD & Soft-Delete (`is_active`), Pemenuhan Pesanan (`SHIPPED`/`COMPLETED`), & Integrasi Object Storage. | Draf    |
+| 1.3.0 | 21 Okt 2026 | M. Iqbal Ababil | DRAF: Modul Dashboard Admin (CMS Internal), Analitik Penjualan Eksekutif, Manajemen Katalog CRUD & Soft-Delete (`is_active`), Pemenuhan Pesanan (`SHIPPED`/`COMPLETED`), & Integrasi Object Storage. | Dirilis |
 | 2.0.0 | TBA         | M. Iqbal Ababil | RENCANA: Modul Integrasi Eksternal (API Logistik 3PL), Ongkos Kirim Dinamis & Pelacakan Resi.                                                                                                        | Rencana |
 
-**Versi:** 1.3.0 **Status:** Draf
+**Versi:** 1.3.0 **Status:** Dirilis
 
 ---
 

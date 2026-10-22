@@ -55,7 +55,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="E-Commerce API",
-    version="1.0.0",
+    version="1.3.0",
     lifespan=lifespan,
 )
 app.state.limiter = limiter
