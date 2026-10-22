@@ -117,6 +117,7 @@ class OrderItemResponse(BaseModel):
     id: Optional[UUID] = None
     product_id: UUID
     product_name: Optional[str] = None
+    product_image: Optional[str] = None
     quantity: int
     price_at_purchase: float
 

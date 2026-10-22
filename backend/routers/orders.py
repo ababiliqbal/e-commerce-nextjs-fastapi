@@ -166,8 +166,17 @@ def checkout(
         new_order.payment_gateway_ref = snap_token
 
         db.commit()
-        db.refresh(new_order)
-        return new_order
+        created_order = (
+            db.query(Order)
+            .options(
+                selectinload(Order.items)
+                .selectinload(OrderItem.product)
+                .selectinload(Product.images)
+            )
+            .filter(Order.id == new_order.id)
+            .first()
+        )
+        return created_order
 
     except HTTPException:
         db.rollback()
@@ -191,11 +200,16 @@ def get_my_orders(
 ):
     """
     Mengambil riwayat pesanan milik pengguna yang sedang terautentikasi
-    dengan eager loading (selectinload) pada item pesanan, diurutkan DESC.
+    dengan eager loading (selectinload) pada item pesanan, produk, dan galeri gambar,
+    diurutkan berdasarkan tanggal terbaru (created_at DESC).
     """
     orders = (
         db.query(Order)
-        .options(selectinload(Order.items))
+        .options(
+            selectinload(Order.items)
+            .selectinload(OrderItem.product)
+            .selectinload(Product.images)
+        )
         .filter(Order.user_id == current_user.id)
         .order_by(Order.created_at.desc())
         .all()
@@ -214,12 +228,16 @@ def get_order(
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
-    Mengambil rincian pesanan spesifik berdasarkan ID pesanan (UUID).
+    Mengambil rincian pesanan spesifik berdasarkan ID pesanan (UUID) beserta produk dan gambarnya.
     Mencegah kebocoran data jika pesanan dibuat oleh akun terdaftar (member).
     """
     order = (
         db.query(Order)
-        .options(selectinload(Order.items))
+        .options(
+            selectinload(Order.items)
+            .selectinload(OrderItem.product)
+            .selectinload(Product.images)
+        )
         .filter(Order.id == order_id)
         .first()
     )

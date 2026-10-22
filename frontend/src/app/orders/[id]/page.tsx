@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PayButton } from "@/components/PayButton";
-import { Product, getPrimaryProductImage } from "@/types/product";
+import { Product, getPrimaryProductImage, FALLBACK_PRODUCT_IMAGE } from "@/types/product";
 import { apiFetch } from "@/lib/api";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -34,6 +34,8 @@ interface OrderItem {
   product_id: string;
   quantity: number;
   price_at_purchase: number;
+  product_name?: string | null;
+  product_image?: string | null;
 }
 
 interface OrderDetail {
@@ -458,7 +460,11 @@ export default function OrderDetailPage() {
                     <div className="divide-y divide-border/60 rounded-xl border border-border/60 bg-muted/10">
                       {order.items.map((item, index) => {
                         const product = productsMap.get(item.product_id);
-                        const primaryImage = product ? getPrimaryProductImage(product) : null;
+                        const primaryImage =
+                          item.product_image ||
+                          (product ? getPrimaryProductImage(product) : null) ||
+                          FALLBACK_PRODUCT_IMAGE;
+                        const productName = item.product_name || product?.name || `Produk #${item.product_id.slice(0, 8)}`;
                         const subtotal = item.price_at_purchase * item.quantity;
 
                         return (
@@ -472,8 +478,11 @@ export default function OrderDetailPage() {
                                   /* eslint-disable-next-line @next/next/no-img-element */
                                   <img
                                     src={primaryImage}
-                                    alt={product?.name || "Produk"}
+                                    alt={productName}
                                     className="h-full w-full object-cover"
+                                    onError={(e) => {
+                                      (e.currentTarget as HTMLImageElement).src = FALLBACK_PRODUCT_IMAGE;
+                                    }}
                                   />
                                 ) : (
                                   <div className="flex h-full w-full items-center justify-center text-muted-foreground">
@@ -483,7 +492,7 @@ export default function OrderDetailPage() {
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold text-foreground truncate">
-                                  {product ? product.name : `Produk #${item.product_id.slice(0, 8)}`}
+                                  {productName}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   {item.quantity} x {formatPrice(item.price_at_purchase)}
