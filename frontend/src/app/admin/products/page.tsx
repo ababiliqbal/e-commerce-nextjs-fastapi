@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import Link from "next/link";
 import {
   Package,
+  Scale,
   Plus,
   Search,
   RefreshCw,
@@ -38,6 +39,7 @@ import {
   ProductAdminWriteRequest,
   ProductImageInput,
   FALLBACK_PRODUCT_IMAGE,
+  formatWeight,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +52,7 @@ interface ProductFormData {
   description: string;
   price: string;
   stock_quantity: string;
+  weight_grams: string;
   is_active: boolean;
   images: ProductImageInput[];
 }
@@ -59,6 +62,7 @@ const emptyFormData: ProductFormData = {
   description: "",
   price: "",
   stock_quantity: "0",
+  weight_grams: "1000",
   is_active: true,
   images: [],
 };
@@ -191,6 +195,7 @@ export default function AdminProductsPage() {
       description: product.description || "",
       price: String(product.price),
       stock_quantity: String(product.stock_quantity),
+      weight_grams: String(product.weight_grams ?? 1000),
       is_active: product.is_active ?? true,
       images: existingImages,
     });
@@ -223,6 +228,7 @@ export default function AdminProductsPage() {
           description: product.description || null,
           price: Number(product.price),
           stock_quantity: Number(product.stock_quantity),
+          weight_grams: Number(product.weight_grams ?? 1000),
           is_active: true,
           image_url: product.image_url || null,
           images: (product.images || []).map((img, idx) => ({
@@ -412,6 +418,13 @@ export default function AdminProductsPage() {
       errors.stock_quantity = "Stok gudang harus berupa bilangan bulat >= 0.";
     }
 
+    const numWeight = parseInt(formData.weight_grams, 10);
+    if (isNaN(numWeight) || numWeight < 1) {
+      errors.weight_grams = "Berat produk minimal 1 gram.";
+    } else if (numWeight > 100000) {
+      errors.weight_grams = "Berat produk maksimal 100.000 gram (100 kg).";
+    }
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       toast.error("Mohon perbaiki isian formulir yang belum valid.");
@@ -458,6 +471,7 @@ export default function AdminProductsPage() {
         description: formData.description.trim() ? formData.description.trim() : null,
         price: numPrice,
         stock_quantity: numStock,
+        weight_grams: numWeight,
         is_active: formData.is_active,
         image_url: primaryImg.image_url,
         images: finalImagesList,
@@ -661,11 +675,12 @@ export default function AdminProductsPage() {
           <table className="w-full text-left text-xs sm:text-sm border-collapse">
             <thead>
               <tr className="border-b border-border/80 bg-muted/40 text-muted-foreground font-semibold text-[11px] uppercase tracking-wider">
-                <th className="py-3.5 px-4 w-[40%]">Info Produk</th>
-                <th className="py-3.5 px-4 w-[18%]">Harga Satuan</th>
-                <th className="py-3.5 px-4 w-[16%]">Stok Gudang</th>
-                <th className="py-3.5 px-4 w-[14%]">Status Etalase</th>
-                <th className="py-3.5 px-4 w-[12%] text-right">Aksi Cepat</th>
+                <th className="py-3.5 px-4 w-[34%]">Info Produk</th>
+                <th className="py-3.5 px-4 w-[16%]">Harga Satuan</th>
+                <th className="py-3.5 px-4 w-[14%]">Stok Gudang</th>
+                <th className="py-3.5 px-4 w-[14%]">Bobot Paket</th>
+                <th className="py-3.5 px-4 w-[11%]">Status Etalase</th>
+                <th className="py-3.5 px-4 w-[11%] text-right">Aksi Cepat</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
@@ -689,6 +704,9 @@ export default function AdminProductsPage() {
                       <div className="h-6 bg-muted rounded-full w-24" />
                     </td>
                     <td className="py-4 px-4">
+                      <div className="h-4 bg-muted rounded-md w-20" />
+                    </td>
+                    <td className="py-4 px-4">
                       <div className="h-6 bg-muted rounded-full w-20" />
                     </td>
                     <td className="py-4 px-4 text-right">
@@ -699,7 +717,7 @@ export default function AdminProductsPage() {
               ) : filteredProducts.length === 0 ? (
                 // Empty State
                 <tr>
-                  <td colSpan={5} className="py-16 text-center">
+                  <td colSpan={6} className="py-16 text-center">
                     <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground mb-3">
                       <Package className="h-7 w-7 text-muted-foreground/60" />
                     </div>
@@ -827,6 +845,14 @@ export default function AdminProductsPage() {
                             Tersedia ({product.stock_quantity})
                           </Badge>
                         )}
+                      </td>
+
+                      {/* Kolom 4: Bobot Paket (V2.0.0) */}
+                      <td className="py-4 px-4 align-middle">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/60 text-xs font-semibold text-foreground border border-border/60">
+                          <Scale className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+                          <span>{formatWeight(product.weight_grams ?? 1000)}</span>
+                        </div>
                       </td>
 
                       {/* Kolom 4: Status Etalase */}
@@ -1007,8 +1033,8 @@ export default function AdminProductsPage() {
                     )}
                   </div>
 
-                  {/* Baris Harga & Stok */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Baris Harga, Stok & Berat */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Harga Satuan */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-foreground">
@@ -1068,7 +1094,46 @@ export default function AdminProductsPage() {
                         </p>
                       )}
                     </div>
+
+                    {/* Berat Produk (Gram) V2.0.0 */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-foreground">
+                        Berat Produk (Gram) <strong className="text-red-500">*</strong>
+                      </label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min="1"
+                          max="100000"
+                          step="1"
+                          placeholder="Contoh: 1000"
+                          value={formData.weight_grams}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              weight_grams: e.target.value,
+                            }))
+                          }
+                          className={`text-xs h-10 rounded-xl pr-14 ${
+                            formErrors.weight_grams
+                              ? "border-red-500 focus-visible:ring-red-500"
+                              : "focus-visible:ring-violet-600"
+                          }`}
+                        />
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground pointer-events-none">
+                          gram
+                        </span>
+                      </div>
+                      {formErrors.weight_grams && (
+                        <p className="text-[11px] text-red-500">
+                          {formErrors.weight_grams}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  <p className="text-[11px] text-muted-foreground -mt-2">
+                    * Digunakan untuk kalkulasi ongkos kirim otomatis (1.000 gr = 1 kg).
+                  </p>
 
                   {/* Switch / Checkbox is_active */}
                   <div className="pt-2">

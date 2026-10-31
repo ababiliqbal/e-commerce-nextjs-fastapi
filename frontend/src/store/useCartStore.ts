@@ -4,6 +4,7 @@ import { Product, getPrimaryProductImage } from '@/types/product';
 
 export interface CartItem extends Product {
   quantity: number;
+  weight_grams: number;
 }
 
 export interface CartStore {
@@ -14,6 +15,8 @@ export interface CartStore {
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
+  getTotalWeightGrams: () => number;
+  getChargeableWeightKg: () => number;
   lastOrderId: string | null;
   setLastOrderId: (orderId: string | null) => void;
 }
@@ -33,6 +36,7 @@ export const useCartStore = create<CartStore>()(
 
         const primaryImage = getPrimaryProductImage(product);
         const productImages = product.images || [];
+        const itemWeight = product.weight_grams ?? 1000;
 
         set((state) => {
           const existingItem = state.items.find((item) => item.id === product.id);
@@ -43,6 +47,7 @@ export const useCartStore = create<CartStore>()(
                 item.id === product.id
                   ? {
                       ...item,
+                      weight_grams: item.weight_grams ?? itemWeight,
                       image_url: primaryImage,
                       images: productImages.length > 0 ? productImages : item.images,
                       quantity: Math.min(
@@ -61,6 +66,7 @@ export const useCartStore = create<CartStore>()(
                 ...state.items,
                 {
                   ...product,
+                  weight_grams: itemWeight,
                   image_url: primaryImage,
                   images: productImages,
                   quantity: Math.min(quantity, product.stock_quantity),
@@ -112,6 +118,19 @@ export const useCartStore = create<CartStore>()(
           (total, item) => total + item.price * item.quantity,
           0
         );
+      },
+
+      getTotalWeightGrams: () => {
+        return get().items.reduce(
+          (sum, item) => sum + (item.weight_grams ?? 1000) * item.quantity,
+          0
+        );
+      },
+
+      getChargeableWeightKg: () => {
+        const totalWeight = get().getTotalWeightGrams();
+        if (get().items.length === 0 || totalWeight <= 0) return 0;
+        return Math.max(1, Math.ceil(totalWeight / 1000));
       },
     }),
     {

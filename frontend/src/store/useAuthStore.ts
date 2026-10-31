@@ -13,22 +13,38 @@ export interface User {
   auth_provider: AuthProvider;
 }
 
-export interface ShippingProfile {
-  customer_phone: string;
-  shipping_address: string;
+export interface SavedShipping {
+  phone: string;
+  address: string;
+  // Kompatibilitas mundur dengan schema profil sebelumnya
+  customer_phone?: string;
+  shipping_address?: string;
+  // Preferensi wilayah & kurir pengiriman (V2.0.0)
+  province_id?: string;
+  province_name?: string;
+  city_id?: string;
+  city_name?: string;
+  postal_code?: string;
+  courier_code?: string;
 }
+
+export type ShippingProfile = SavedShipping;
 
 export interface AuthState {
   user: User | null;
   accessToken: string | null;
-  savedShipping: Record<string, ShippingProfile>;
+  savedShipping: Record<string, SavedShipping>;
 
   // Actions
   setAuth: (user: User, accessToken: string) => void;
   setAccessToken: (accessToken: string | null) => void;
   clearAuth: () => void;
-  saveShippingProfile: (userId: string, phone: string, address: string) => void;
-  getShippingProfile: (userId: string) => ShippingProfile | undefined;
+  saveShippingProfile: (
+    userId: string,
+    profileOrPhone: Partial<SavedShipping> | string,
+    legacyAddress?: string
+  ) => void;
+  getShippingProfile: (userId: string) => SavedShipping | undefined;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -62,22 +78,72 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      saveShippingProfile: (userId: string, phone: string, address: string) => {
+      saveShippingProfile: (
+        userId: string,
+        profileOrPhone: Partial<SavedShipping> | string,
+        legacyAddress?: string
+      ) => {
         if (!userId) return;
-        set((state) => ({
-          savedShipping: {
-            ...state.savedShipping,
-            [userId]: {
+        set((state) => {
+          const existing = state.savedShipping[userId] || ({} as SavedShipping);
+          let updated: SavedShipping;
+
+          if (typeof profileOrPhone === 'string') {
+            const phone = profileOrPhone;
+            const address = legacyAddress || '';
+            updated = {
+              ...existing,
+              phone,
+              address,
               customer_phone: phone,
               shipping_address: address,
+            };
+          } else {
+            const phone =
+              profileOrPhone.phone ||
+              profileOrPhone.customer_phone ||
+              existing.phone ||
+              existing.customer_phone ||
+              '';
+            const address =
+              profileOrPhone.address ||
+              profileOrPhone.shipping_address ||
+              existing.address ||
+              existing.shipping_address ||
+              '';
+            updated = {
+              ...existing,
+              ...profileOrPhone,
+              phone,
+              address,
+              customer_phone: phone,
+              shipping_address: address,
+            };
+          }
+
+          return {
+            savedShipping: {
+              ...state.savedShipping,
+              [userId]: updated,
             },
-          },
-        }));
+          };
+        });
       },
 
       getShippingProfile: (userId: string) => {
         if (!userId) return undefined;
-        return get().savedShipping[userId];
+        const raw = get().savedShipping[userId];
+        if (!raw) return undefined;
+        // Normalisasi kompatibilitas mundur
+        const phone = raw.phone || raw.customer_phone || '';
+        const address = raw.address || raw.shipping_address || '';
+        return {
+          ...raw,
+          phone,
+          address,
+          customer_phone: phone,
+          shipping_address: address,
+        };
       },
     }),
     {
