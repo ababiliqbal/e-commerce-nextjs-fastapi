@@ -87,6 +87,30 @@ export interface ShippingRateResponseDTO {
   provider_mode?: string;
 }
 
+export interface TrackingManifestItemDTO {
+  timestamp: string;
+  status_title: string;
+  description: string;
+  city: string;
+  is_current: boolean;
+}
+
+export interface ShipmentTrackingResponseDTO {
+  order_id: string;
+  tracking_number: string | null;
+  courier_code: string | null;
+  courier_name: string;
+  courier_service: string | null;
+  shipping_etd: string | null;
+  status: string;
+  origin: string;
+  destination: string;
+  shipped_at: string | null;
+  completed_at: string | null;
+  manifest: TrackingManifestItemDTO[];
+}
+
+
 export interface CheckoutItemPayload {
   product_id: string;
   quantity: number;
@@ -207,6 +231,27 @@ export function formatWeight(weightGrams: number = 1000): string {
   });
   return `${grams.toLocaleString("id-ID")} gr (${formattedKg} kg)`;
 }
+
+/**
+ * Menghasilkan nomor resi standar ekspedisi kurir secara interaktif di sisi klien
+ * Format: AMBA-{KURIR}-{YYYYMMDD}-{6_HEX}
+ * Contoh: AMBA-JNT-20261031-9F4A2B
+ */
+export function generateTrackingNumber(courierCode: string = "REG"): string {
+  const cleanCourier = (courierCode || "REG").trim().toUpperCase();
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const dateStr = `${y}${m}${d}`;
+  const randomHex = Array.from({ length: 6 }, () =>
+    Math.floor(Math.random() * 16).toString(16)
+  )
+    .join("")
+    .toUpperCase();
+  return `AMBA-${cleanCourier}-${dateStr}-${randomHex}`;
+}
+
 
 export const FALLBACK_PRODUCT_IMAGE =
   "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=1000&q=80";
@@ -680,14 +725,22 @@ export async function fetchAdminOrders(
  */
 export async function updateAdminOrderStatus(
   orderId: string,
-  status: "SHIPPED" | "COMPLETED" | "CANCELLED"
+  status: "PAID" | "SHIPPED" | "COMPLETED" | "CANCELLED" | string,
+  trackingNumber?: string | null
 ): Promise<OrderResponse> {
+  const payload: { status: string; tracking_number?: string | null } = {
+    status,
+  };
+  if (trackingNumber !== undefined) {
+    payload.tracking_number = trackingNumber;
+  }
+
   const response = await apiFetch(`/api/v1/admin/orders/${orderId}/status`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(payload),
   });
 
   return handleApiResponse<OrderResponse>(
@@ -762,5 +815,22 @@ export async function checkoutOrder(
     "Gagal memproses inisiasi pesanan"
   );
 }
+
+/**
+ * Mengambil riwayat pelacakan perjalanan paket dan manifes pengiriman
+ * Endpoint: GET /api/v1/logistics/track/${orderId}
+ */
+export async function getOrderTracking(
+  orderId: string
+): Promise<ShipmentTrackingResponseDTO> {
+  const response = await apiFetch(`/api/v1/logistics/track/${orderId}`, {
+    method: "GET",
+  });
+  return handleApiResponse<ShipmentTrackingResponseDTO>(
+    response,
+    `Gagal melacak pengiriman paket pesanan ${orderId}`
+  );
+}
+
 
 export default apiFetch;
