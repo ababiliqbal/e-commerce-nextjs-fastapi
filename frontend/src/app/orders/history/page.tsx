@@ -12,11 +12,13 @@ import {
   XCircle,
   ArrowRight,
   ShoppingBag,
-  ExternalLink,
   Phone,
   User,
   Truck,
+  Copy,
+  Check,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -30,39 +32,18 @@ import {
   Product,
   getPrimaryProductImage,
   FALLBACK_PRODUCT_IMAGE,
+  OrderResponse,
 } from "@/lib/api";
-
-interface OrderItem {
-  id?: string;
-  product_id: string;
-  product_name?: string | null;
-  product_image?: string | null;
-  quantity: number;
-  price_at_purchase: number;
-}
-
-interface Order {
-  id: string;
-  user_id?: string | null;
-  customer_name: string;
-  customer_email: string;
-  customer_phone: string;
-  shipping_address: string;
-  total_amount: number;
-  status: "PENDING" | "PAID" | "SHIPPED" | "COMPLETED" | "CANCELLED";
-  payment_gateway_ref?: string | null;
-  created_at: string;
-  items: OrderItem[];
-}
 
 export default function OrderHistoryPage() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [mounted, setMounted] = useState(false);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [productsMap, setProductsMap] = useState<Map<string, Product>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [copiedTrackingId, setCopiedTrackingId] = useState<string | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -100,7 +81,7 @@ export default function OrderHistoryPage() {
           throw new Error("Gagal mengambil riwayat pesanan.");
         }
 
-        const ordersData: Order[] = await ordersRes.json();
+        const ordersData: OrderResponse[] = await ordersRes.json();
 
         // Buat map produk untuk menampilkan gambar & nama item
         const pMap = new Map<string, Product>();
@@ -156,7 +137,16 @@ export default function OrderHistoryPage() {
     }
   };
 
-  const renderStatusBadge = (status: Order["status"]) => {
+  const handleCopyTracking = (trackingNum: string) => {
+    navigator.clipboard.writeText(trackingNum);
+    setCopiedTrackingId(trackingNum);
+    toast.success("Nomor resi berhasil disalin!");
+    setTimeout(() => {
+      setCopiedTrackingId(null);
+    }, 2000);
+  };
+
+  const renderStatusBadge = (status: OrderResponse["status"]) => {
     switch (status) {
       case "PAID":
         return (
@@ -213,7 +203,7 @@ export default function OrderHistoryPage() {
               Riwayat Pesanan
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Pantau status pembayaran dan histori seluruh transaksi belanja Anda di Amba Shop.
+              Pantau status pembayaran, pelacakan ekspedisi, dan nomor resi seluruh transaksi belanja Anda di Amba Shop.
             </p>
           </div>
 
@@ -303,12 +293,53 @@ export default function OrderHistoryPage() {
                         </p>
                       </div>
 
-                      {/* Badge Status (PENDING / PAID / CANCELLED) */}
+                      {/* Badge Status */}
                       <div>{renderStatusBadge(order.status)}</div>
                     </div>
                   </CardHeader>
 
                   <CardContent className="pt-4 space-y-4">
+                    {/* Ringkasan Kurir, Kota Tujuan & No. Resi (V2.0.0) */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-muted/40 border border-border/60 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 shrink-0">
+                          <Truck className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <span className="font-extrabold text-foreground text-xs block">
+                            {(order.courier_code || "JNE").toUpperCase()} ({order.courier_service || "REG"}) • {order.shipping_city_name || "Alamat Terdaftar"}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">
+                            Ongkir: {formatPrice(order.shipping_cost || 0)}
+                            {order.shipping_etd ? ` • Estimasi Tiba: ${order.shipping_etd} hari` : ""}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Nomor Resi Pengiriman jika sudah tersedia */}
+                      {order.tracking_number && (
+                        <div className="flex items-center gap-1.5 bg-background px-2.5 py-1 rounded-lg border border-border/80 shadow-2xs">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                            No. Resi:
+                          </span>
+                          <span className="font-mono text-xs font-black text-violet-700 dark:text-violet-400">
+                            {order.tracking_number}
+                          </span>
+                          <button
+                            onClick={() => handleCopyTracking(order.tracking_number!)}
+                            className="text-muted-foreground hover:text-violet-700 transition-colors p-0.5 rounded hover:bg-muted cursor-pointer"
+                            title="Salin Nomor Resi"
+                          >
+                            {copiedTrackingId === order.tracking_number ? (
+                              <Check className="h-3 w-3 text-emerald-600" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Daftar Item / Kuantitas */}
                     <div className="space-y-3">
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -335,22 +366,16 @@ export default function OrderHistoryPage() {
                               <div className="flex items-center gap-3 min-w-0">
                                 {/* Thumbnail Produk */}
                                 <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-muted border border-border/60">
-                                  {primaryImage ? (
-                                    /* eslint-disable-next-line @next/next/no-img-element */
-                                    <img
-                                      src={primaryImage}
-                                      alt={productName}
-                                      className="h-full w-full object-cover"
-                                      onError={(e) => {
-                                        (e.currentTarget as HTMLImageElement).src =
-                                          FALLBACK_PRODUCT_IMAGE;
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                                      <Package className="w-5 h-5" />
-                                    </div>
-                                  )}
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={primaryImage}
+                                    alt={productName}
+                                    className="h-full w-full object-cover"
+                                    onError={(e) => {
+                                      (e.currentTarget as HTMLImageElement).src =
+                                        FALLBACK_PRODUCT_IMAGE;
+                                    }}
+                                  />
                                 </div>
 
                                 {/* Detail Item */}
@@ -376,31 +401,33 @@ export default function OrderHistoryPage() {
                       </div>
                     </div>
 
-                    {/* Informasi Pengiriman */}
-                    <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 text-xs space-y-1.5">
+                    {/* Alamat Pengiriman */}
+                    <div className="p-3.5 rounded-xl bg-muted/20 border border-border/60 text-xs space-y-1.5">
                       <div className="flex items-center gap-1.5 font-semibold text-foreground">
                         <MapPin className="w-3.5 h-3.5 text-violet-700 dark:text-violet-400" />
-                        <span>Alamat Pengiriman:</span>
+                        <span>Alamat Lengkap Pengiriman:</span>
                       </div>
                       <p className="text-muted-foreground pl-5 leading-relaxed">
-                        {order.shipping_address}
+                        {order.shipping_address},{" "}
+                        {order.shipping_city_name || ""} {order.shipping_province || ""}{" "}
+                        {order.shipping_postal_code || ""}
                       </p>
                       <div className="flex items-center gap-4 pl-5 pt-1 text-[11px] text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1">
                           <User className="w-3 h-3" />
                           {order.customer_name}
                         </span>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 font-mono">
                           <Phone className="w-3 h-3" />
                           {order.customer_phone}
                         </span>
                       </div>
                     </div>
 
-                    {/* Footer Kartu: Total Harga & Aksi */}
+                    {/* Footer Kartu: Total Harga & Aksi Lacak */}
                     <div className="pt-3 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
-                        <span className="text-xs text-muted-foreground">Total Pembayaran:</span>
+                        <span className="text-xs text-muted-foreground">Total Tagihan (Termasuk Ongkir):</span>
                         <p className="text-lg font-black text-violet-700 dark:text-violet-400">
                           {formatPrice(order.total_amount)}
                         </p>
@@ -409,13 +436,12 @@ export default function OrderHistoryPage() {
                       <div className="flex items-center gap-2">
                         <Button
                           asChild
-                          variant="outline"
                           size="sm"
-                          className="rounded-xl h-9 text-xs font-semibold hover:bg-violet-700/10 hover:text-violet-700 transition-colors cursor-pointer"
+                          className="rounded-xl h-9 text-xs font-bold bg-violet-700 hover:bg-violet-800 text-white shadow-xs transition-colors cursor-pointer"
                         >
                           <Link href={`/orders/${order.id}`}>
-                            <span>Detail Pesanan</span>
-                            <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+                            <Truck className="w-3.5 h-3.5 mr-1.5" />
+                            <span>Lacak Paket & Detail</span>
                           </Link>
                         </Button>
                       </div>
