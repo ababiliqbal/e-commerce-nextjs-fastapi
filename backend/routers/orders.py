@@ -14,6 +14,7 @@ from database import get_db
 from models import Order, OrderItem, OrderStatus, Product, User, UserRole
 from schemas import CheckoutRequest, OrderResponse
 from security import get_current_user, get_optional_user
+from logistics import verify_and_get_service_rate
 
 # Impor limiter dari modul utama (dengan fallback)
 try:
@@ -52,9 +53,10 @@ def checkout(
     current_user: Optional[User] = Depends(get_optional_user),
 ):
     """
-    Inisiasi pemesanan (Hybrid Checkout). Mendukung pengguna guest maupun
+    Inisiasi pemesanan (Hybrid Checkout V2.0.0). Mendukung pengguna guest maupun
     pengguna terautentikasi (user_id disematkan jika pengguna login).
-    Menggunakan Pessimistic Locking (.with_for_update()) dan Zero-Trust Pricing.
+    Menggunakan Pessimistic Locking (.with_for_update()), akumulasi bobot fisik produk,
+    serta Zero-Trust Pricing & Shipping Cost Verification di sisi server.
     """
     if not payload.items:
         raise HTTPException(
@@ -63,7 +65,8 @@ def checkout(
         )
 
     try:
-        total_amount = Decimal("0.00")
+        subtotal_items = Decimal("0.00")
+        total_weight_grams = 0
         order_items_to_create = []
         midtrans_items = []
 
@@ -95,7 +98,9 @@ def checkout(
 
             product.stock_quantity -= item.quantity
             item_price = Decimal(str(product.price))
-            total_amount += item_price * item.quantity
+            subtotal_items += item_price * item.quantity
+            item_weight = int(product.weight_grams if product.weight_grams and product.weight_grams > 0 else 1000)
+            total_weight_grams += item_weight * item.quantity
 
             order_items_to_create.append(
                 OrderItem(
@@ -107,9 +112,32 @@ def checkout(
 
             midtrans_items.append({
                 "id": str(product.id),
-                "price": int(item_price),
+                "price": int(round(float(item_price))),
                 "quantity": item.quantity,
                 "name": product.name[:50],
+            })
+
+        # Verifikasi tarif ongkos kirim resmi di sisi server (Zero-Trust Shipping Verification)
+        shipping_cost, shipping_etd, city_dto, courier_name, canonical_service = (
+            verify_and_get_service_rate(
+                destination_city_id=payload.shipping_city_id,
+                weight_grams=total_weight_grams,
+                courier_code=payload.courier_code,
+                courier_service=payload.courier_service,
+            )
+        )
+
+        shipping_cost_dec = Decimal(str(round(shipping_cost, 2)))
+        total_amount = subtotal_items + shipping_cost_dec
+
+        # Tambahkan item ongkos kirim ke item_details Midtrans jika shipping_cost > 0
+        if shipping_cost > 0:
+            shipping_fee_int = int(round(float(shipping_cost)))
+            midtrans_items.append({
+                "id": "SHIPPING-FEE",
+                "price": shipping_fee_int,
+                "quantity": 1,
+                "name": f"Ongkir {payload.courier_code.upper()} - {canonical_service}"[:50],
             })
 
         order_id = uuid.uuid4()
@@ -119,7 +147,16 @@ def checkout(
             customer_name=payload.customer_name,
             customer_email=payload.customer_email,
             customer_phone=payload.customer_phone,
+            shipping_province=payload.shipping_province or city_dto.province_name,
+            shipping_city_id=city_dto.city_id,
+            shipping_city_name=payload.shipping_city_name or city_dto.city_name,
+            shipping_postal_code=payload.shipping_postal_code or city_dto.postal_code,
             shipping_address=payload.shipping_address,
+            courier_code=payload.courier_code.strip().lower(),
+            courier_service=canonical_service,
+            shipping_etd=shipping_etd,
+            shipping_weight_grams=total_weight_grams,
+            shipping_cost=shipping_cost_dec,
             total_amount=total_amount,
             status=OrderStatus.PENDING.value,
             items=order_items_to_create,
@@ -127,11 +164,14 @@ def checkout(
 
         db.add(new_order)
 
+        # Hitung gross_amount Midtrans dari total seluruh item_details agar sinkron presisi
+        midtrans_gross_amount = sum(it["price"] * it["quantity"] for it in midtrans_items)
+
         # Susun payload JSON Midtrans Snap
         midtrans_payload = {
             "transaction_details": {
                 "order_id": str(order_id),
-                "gross_amount": int(total_amount),
+                "gross_amount": midtrans_gross_amount,
             },
             "customer_details": {
                 "first_name": payload.customer_name,
@@ -139,6 +179,8 @@ def checkout(
                 "phone": payload.customer_phone,
                 "shipping_address": {
                     "address": payload.shipping_address,
+                    "city": city_dto.city_name,
+                    "postal_code": city_dto.postal_code,
                 },
             },
             "item_details": midtrans_items,

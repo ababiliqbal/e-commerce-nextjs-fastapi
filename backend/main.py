@@ -55,7 +55,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="E-Commerce API",
-    version="1.3.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 app.state.limiter = limiter
@@ -64,11 +64,13 @@ from routers.auth import router as auth_router
 from routers.products import router as products_router
 from routers.orders import router as orders_router
 from routers.admin import router as admin_router
+from routers.logistics import router as logistics_router
 
 app.include_router(auth_router)
 app.include_router(products_router)
 app.include_router(orders_router)
 app.include_router(admin_router)
+app.include_router(logistics_router)
 
 
 @app.exception_handler(RateLimitExceeded)

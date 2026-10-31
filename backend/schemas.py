@@ -24,10 +24,107 @@ class ProductResponse(BaseModel):
     description: Optional[str] = None
     price: float
     stock_quantity: int
+    weight_grams: int = Field(default=1000, gt=0, le=100000)
     is_active: bool = True
     created_at: datetime
     image_url: Optional[str] = None
     images: List[ProductImageResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# Logistics & 3PL Schemas (V2.0.0)
+# ============================================================================
+
+
+class ProvinceDTO(BaseModel):
+    province_id: str
+    province_name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CityDTO(BaseModel):
+    city_id: str
+    province_id: str
+    province_name: str
+    city_name: str
+    type: str
+    postal_code: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ShippingServiceOptionDTO(BaseModel):
+    service: str
+    description: str
+    cost: float
+    etd: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ShippingRateRequest(BaseModel):
+    destination_city_id: str
+    weight_grams: int = Field(..., gt=0, le=500000)
+    courier_code: str = Field(..., description="jne | jnt | sicepat | pos")
+
+    @field_validator("courier_code")
+    @classmethod
+    def validate_courier_code(cls, value: str) -> str:
+        clean = value.strip().lower()
+        if clean not in ("jne", "jnt", "sicepat", "pos"):
+            raise ValueError("courier_code harus salah satu dari: jne, jnt, sicepat, pos.")
+        return clean
+
+    @field_validator("destination_city_id")
+    @classmethod
+    def validate_destination_city_id(cls, value: str) -> str:
+        clean = value.strip()
+        if "<" in clean or ">" in clean:
+            raise ValueError("Karakter tidak valid terdeteksi.")
+        if not clean:
+            raise ValueError("destination_city_id tidak boleh kosong.")
+        return clean
+
+
+class ShippingRateResponse(BaseModel):
+    origin_city: str
+    destination_city: CityDTO
+    weight_grams: int
+    chargeable_weight_kg: int
+    courier_code: str
+    courier_name: str
+    services: List[ShippingServiceOptionDTO]
+    provider_mode: str = "BUILTIN_ENGINE"  # "LIVE_RAJAONGKIR" or "BUILTIN_ENGINE"
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TrackingManifestItemDTO(BaseModel):
+    timestamp: str
+    status_title: str
+    description: str
+    city: str
+    is_current: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ShipmentTrackingResponse(BaseModel):
+    order_id: UUID
+    tracking_number: Optional[str] = None
+    courier_code: Optional[str] = None
+    courier_name: str
+    courier_service: Optional[str] = None
+    shipping_etd: Optional[str] = None
+    status: str
+    origin: str
+    destination: str
+    shipped_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    manifest: List[TrackingManifestItemDTO] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -100,17 +197,41 @@ class CheckoutRequest(BaseModel):
     customer_name: str
     customer_email: str
     customer_phone: str
+    shipping_province: Optional[str] = None
+    shipping_city_id: str = Field(..., min_length=1)
+    shipping_city_name: Optional[str] = None
+    shipping_postal_code: Optional[str] = None
     shipping_address: str
+    courier_code: str = Field(..., description="jne | jnt | sicepat | pos")
+    courier_service: str = Field(..., min_length=1, description="e.g. REG, YES, BEST, ECO")
     items: List[CheckoutItemRequest] = Field(..., min_length=1)
 
     model_config = ConfigDict(from_attributes=True)
 
-    @field_validator("customer_name", "customer_phone", "shipping_address")
+    @field_validator(
+        "customer_name",
+        "customer_phone",
+        "shipping_address",
+        "shipping_province",
+        "shipping_city_id",
+        "shipping_city_name",
+        "shipping_postal_code",
+        "courier_code",
+        "courier_service",
+    )
     @classmethod
-    def validate_no_html_tags(cls, value: str) -> str:
-        if "<" in value or ">" in value:
-            raise ValueError("Karakter tidak valid terdeteksi.")
+    def validate_no_html_tags(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and ("<" in value or ">" in value):
+            raise ValueError("Karakter tidak valid (< atau >) terdeteksi.")
         return value
+
+    @field_validator("courier_code")
+    @classmethod
+    def validate_courier_code(cls, value: str) -> str:
+        clean = value.strip().lower()
+        if clean not in ("jne", "jnt", "sicepat", "pos"):
+            raise ValueError("courier_code harus salah satu dari: jne, jnt, sicepat, pos.")
+        return clean
 
 
 class OrderItemResponse(BaseModel):
@@ -130,7 +251,19 @@ class OrderResponse(BaseModel):
     customer_name: str
     customer_email: str
     customer_phone: str
+    shipping_province: Optional[str] = None
+    shipping_city_id: Optional[str] = None
+    shipping_city_name: Optional[str] = None
+    shipping_postal_code: Optional[str] = None
     shipping_address: str
+    courier_code: Optional[str] = None
+    courier_service: Optional[str] = None
+    shipping_etd: Optional[str] = None
+    shipping_weight_grams: int = 1000
+    shipping_cost: float = 0.0
+    tracking_number: Optional[str] = None
+    shipped_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
     total_amount: float
     status: str
     payment_gateway_ref: Optional[str] = None
@@ -157,7 +290,7 @@ class MidtransWebhookPayload(BaseModel):
 
 
 # ============================================================================
-# Admin CMS & Analytics Schemas (V1.3.0)
+# Admin CMS & Analytics Schemas (V1.3.0 & V2.0.0)
 # ============================================================================
 
 
@@ -174,6 +307,7 @@ class ProductAdminWriteRequest(BaseModel):
     description: Optional[str] = None
     price: float = Field(..., gt=0)
     stock_quantity: int = Field(..., ge=0)
+    weight_grams: int = Field(default=1000, gt=0, le=100000)
     is_active: bool = True
     image_url: Optional[str] = None
     images: List[ProductImageWriteItem] = []
@@ -190,8 +324,19 @@ class ProductAdminWriteRequest(BaseModel):
 
 class OrderStatusUpdateRequest(BaseModel):
     status: str
+    tracking_number: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("status", "tracking_number")
+    @classmethod
+    def validate_no_html_tags(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None:
+            if "<" in value or ">" in value:
+                raise ValueError("Karakter tidak valid (< atau >) terdeteksi.")
+            if len(value) > 100:
+                raise ValueError("Panjang teks melebihi batas 100 karakter.")
+        return value
 
 
 class ImageUploadResponse(BaseModel):
