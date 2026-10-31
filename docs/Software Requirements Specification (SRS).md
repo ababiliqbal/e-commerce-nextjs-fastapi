@@ -10,9 +10,9 @@
 | 1.1.0 | 16 Okt 2026 | M. Iqbal Ababil | Refactoring UI/UX (CRO Pattern, Brand Color 'Tech Violet'), Security Audit (CORS Regex, Rate Limiting, XSS Validation).                                                                              | Dirilis |
 | 1.2.0 | 19 Okt 2026 | M. Iqbal Ababil | Penambahan Modul IAM (Login/Register JWT, Google SSO OIDC, RBAC), Galeri Multi-Gambar Produk (`product_images`), Member Checkout & Riwayat Pesanan, Migrasi DB.                                      | Dirilis |
 | 1.3.0 | 21 Okt 2026 | M. Iqbal Ababil | Modul Dashboard Admin (CMS Internal), Analitik Penjualan Eksekutif, Manajemen Katalog CRUD & Soft-Delete (`is_active`), Pemenuhan Pesanan (`SHIPPED`/`COMPLETED`), & Integrasi Object Storage.       | Dirilis |
-| 2.0.0 | 22 Okt 2026 | M. Iqbal Ababil | DRAF: Modul Integrasi Logistik 3PL Hibrida (RajaOngkir API + Built-in Tariff Engine), Atribut Berat Produk (`weight_grams`), Kalkulasi Ongkos Kirim Dinamis, Manajemen Nomor Resi & Pelacakan Paket. | Draf    |
+| 2.0.0 | 22 Okt 2026 | M. Iqbal Ababil | DRAF: Modul Integrasi Logistik 3PL Hibrida (RajaOngkir API + Built-in Tariff Engine), Atribut Berat Produk (`weight_grams`), Kalkulasi Ongkos Kirim Dinamis, Manajemen Nomor Resi & Pelacakan Paket. | Dirilis |
 
-**Versi:** 2.0.0 **Status:** Draf
+**Versi:** 2.0.0 **Status:** Dirilis
 
 ---
 
