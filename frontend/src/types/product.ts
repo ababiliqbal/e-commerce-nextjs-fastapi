@@ -11,6 +11,7 @@ export interface Product {
   description: string;
   price: number;
   stock_quantity: number;
+  weight_grams?: number;
   image_url?: string;
   images?: ProductImage[];
   created_at?: string;
@@ -20,4 +21,3 @@ export {
   FALLBACK_PRODUCT_IMAGE,
   getPrimaryProductImage,
 } from "@/lib/api";
-

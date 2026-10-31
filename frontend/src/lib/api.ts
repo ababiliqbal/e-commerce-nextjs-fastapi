@@ -13,6 +13,7 @@ export interface Product {
   description: string;
   price: number;
   stock_quantity: number;
+  weight_grams?: number;
   is_active?: boolean;
   image_url?: string;
   images?: {
@@ -36,9 +37,73 @@ export interface ProductAdminWriteRequest {
   description: string | null;
   price: number;
   stock_quantity: number;
+  weight_grams?: number;
   is_active: boolean;
   image_url?: string | null;
   images: ProductImageInput[];
+}
+
+export type ProductAdminWritePayload = ProductAdminWriteRequest;
+
+// ============================================================================
+// DTO Logistik & Kalkulasi Ongkir (V2.0.0)
+// ============================================================================
+
+export interface ProvinceDTO {
+  province_id: string;
+  province_name: string;
+}
+
+export interface CityDTO {
+  city_id: string;
+  province_id: string;
+  province_name: string;
+  city_name: string;
+  type: string;
+  postal_code: string;
+}
+
+export interface ShippingServiceOptionDTO {
+  service: string;
+  description: string;
+  cost: number;
+  etd: string;
+}
+
+export interface ShippingRateRequestPayload {
+  destination_city_id: string;
+  weight_grams: number;
+  courier_code: string;
+}
+
+export interface ShippingRateResponseDTO {
+  origin_city: string;
+  destination_city: CityDTO;
+  weight_grams: number;
+  chargeable_weight_kg: number;
+  courier_code: string;
+  courier_name: string;
+  services: ShippingServiceOptionDTO[];
+  provider_mode?: string;
+}
+
+export interface CheckoutItemPayload {
+  product_id: string;
+  quantity: number;
+}
+
+export interface CheckoutPayload {
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  shipping_province: string;
+  shipping_city_id: string;
+  shipping_city_name: string;
+  shipping_postal_code: string;
+  shipping_address: string;
+  courier_code: string;
+  courier_service: string;
+  items: CheckoutItemPayload[];
 }
 
 export interface ImageUploadResponse {
@@ -70,7 +135,19 @@ export interface OrderResponse {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  shipping_province?: string | null;
+  shipping_city_id?: string | null;
+  shipping_city_name?: string | null;
+  shipping_postal_code?: string | null;
   shipping_address: string;
+  courier_code?: string | null;
+  courier_service?: string | null;
+  shipping_etd?: string | null;
+  shipping_weight_grams?: number | null;
+  shipping_cost?: number | null;
+  tracking_number?: string | null;
+  shipped_at?: string | null;
+  completed_at?: string | null;
   total_amount: number;
   status: OrderStatus;
   payment_gateway_ref?: string | null;
@@ -113,6 +190,22 @@ export interface AdminAnalyticsResponse {
   archived_products_count: number;
   low_stock_products: LowStockProduct[];
   top_selling_products: TopSellingProduct[];
+}
+
+/**
+ * Format bobot dalam gram atau kilogram secara elegan
+ * Jika < 1000 gr tampilkan '850 gr', jika >= 1000 gr tampilkan '1.000 gr (1 kg)'
+ */
+export function formatWeight(weightGrams: number = 1000): string {
+  const grams = Math.round(weightGrams);
+  if (grams < 1000) {
+    return `${grams.toLocaleString("id-ID")} gr`;
+  }
+  const kg = grams / 1000;
+  const formattedKg = kg.toLocaleString("id-ID", {
+    maximumFractionDigits: 1,
+  });
+  return `${grams.toLocaleString("id-ID")} gr (${formattedKg} kg)`;
 }
 
 export const FALLBACK_PRODUCT_IMAGE =
@@ -600,6 +693,73 @@ export async function updateAdminOrderStatus(
   return handleApiResponse<OrderResponse>(
     response,
     `Gagal memperbarui status pesanan ${orderId}`
+  );
+}
+
+// ============================================================================
+// API Logistik & 3PL RajaOngkir V2.0.0
+// ============================================================================
+
+/**
+ * Mengambil daftar seluruh provinsi di Indonesia yang didukung sistem pengiriman
+ * Endpoint: GET /api/v1/logistics/provinces
+ */
+export async function getProvinces(): Promise<ProvinceDTO[]> {
+  const response = await apiFetch("/api/v1/logistics/provinces", {
+    method: "GET",
+  });
+  return handleApiResponse<ProvinceDTO[]>(response, "Gagal memuat data provinsi");
+}
+
+/**
+ * Mengambil daftar kota/kabupaten dengan filter opsional ID provinsi
+ * Endpoint: GET /api/v1/logistics/cities?province_id={provinceId}
+ */
+export async function getCities(provinceId?: string): Promise<CityDTO[]> {
+  const qs = provinceId ? `?province_id=${encodeURIComponent(provinceId)}` : "";
+  const response = await apiFetch(`/api/v1/logistics/cities${qs}`, {
+    method: "GET",
+  });
+  return handleApiResponse<CityDTO[]>(response, "Gagal memuat data kota/kabupaten");
+}
+
+/**
+ * Menghitung estimasi ongkos kirim dinamis berdasarkan kota tujuan, bobot, dan kurir
+ * Endpoint: POST /api/v1/logistics/rates
+ */
+export async function getShippingRates(
+  payload: ShippingRateRequestPayload
+): Promise<ShippingRateResponseDTO> {
+  const response = await apiFetch("/api/v1/logistics/rates", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  return handleApiResponse<ShippingRateResponseDTO>(
+    response,
+    "Gagal menghitung tarif ongkos kirim"
+  );
+}
+
+/**
+ * Melakukan inisiasi pesanan & verifikasi ongkos kirim ke server (Hybrid Checkout)
+ * Endpoint: POST /api/v1/orders/checkout
+ */
+export async function checkoutOrder(
+  payload: CheckoutPayload
+): Promise<OrderResponse> {
+  const response = await apiFetch("/api/v1/orders/checkout", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  return handleApiResponse<OrderResponse>(
+    response,
+    "Gagal memproses inisiasi pesanan"
   );
 }
 

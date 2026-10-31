@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight, Scale } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { AddToCartButton } from "@/components/AddToCartButton";
 import { ProductImageGallery } from "@/components/ProductImageGallery";
 import { Product, ProductImage, getPrimaryProductImage } from "@/types/product";
-import { getServerApiUrl } from "@/lib/api";
+import { getServerApiUrl, formatWeight } from "@/lib/api";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -73,6 +73,13 @@ export default async function ProductDetailPage({
       </div>
     );
   }
+
+  // Normalisasi bobot produk (default 1000 gr jika null/undefined)
+  const productWeight = product.weight_grams ?? 1000;
+  const productWithWeight: Product = {
+    ...product,
+    weight_grams: productWeight,
+  };
 
   const formattedPrice = new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -146,7 +153,7 @@ export default async function ProductDetailPage({
             <div className="flex flex-col justify-between space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge
                       variant={
                         product.stock_quantity > 0 ? "secondary" : "destructive"
@@ -157,7 +164,14 @@ export default async function ProductDetailPage({
                         ? `Sisa Stok: ${product.stock_quantity}`
                         : "Stok Habis"}
                     </Badge>
+
+                    {/* Informasi Bobot Fisik Produk V2.0.0 */}
+                    <div className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/50 px-3 py-0.5 text-xs font-semibold text-muted-foreground shadow-2xs">
+                      <Scale className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
+                      <span>Berat: {formatWeight(productWeight)}</span>
+                    </div>
                   </div>
+
                   <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
                     {product.name}
                   </h1>
@@ -179,7 +193,7 @@ export default async function ProductDetailPage({
 
               {/* Tombol Tambah ke Keranjang */}
               <div className="pt-4">
-                <AddToCartButton product={product} />
+                <AddToCartButton product={productWithWeight} />
               </div>
             </div>
           </div>
