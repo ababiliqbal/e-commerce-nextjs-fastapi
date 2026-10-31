@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
@@ -20,6 +21,7 @@ from schemas import (
 )
 from security import require_role
 from storage import upload_image_to_supabase
+from logistics import generate_tracking_number
 
 try:
     from main import limiter
@@ -259,6 +261,7 @@ def create_admin_product(
         description=payload.description,
         price=Decimal(str(payload.price)),
         stock_quantity=payload.stock_quantity,
+        weight_grams=payload.weight_grams,
         is_active=payload.is_active,
         image_url=primary_image_url,
     )
@@ -310,6 +313,7 @@ def update_admin_product(
     product.description = payload.description
     product.price = Decimal(str(payload.price))
     product.stock_quantity = payload.stock_quantity
+    product.weight_grams = payload.weight_grams
     product.is_active = payload.is_active
 
     # Tentukan primary image URL
@@ -481,7 +485,7 @@ def update_order_status(
             ),
         )
 
-    # Rollback stok jika transisi ke CANCELLED
+    # 1. Rollback stok jika transisi ke CANCELLED
     if target_status == OrderStatus.CANCELLED.value:
         for item in order.items:
             product = (
@@ -492,6 +496,30 @@ def update_order_status(
             )
             if product:
                 product.stock_quantity += item.quantity
+
+    # 2. Invarian Logistik SHIPPED: Wajib nomor resi sah & catat shipped_at
+    elif target_status == OrderStatus.SHIPPED.value:
+        provided_tracking = (
+            payload.tracking_number.strip()
+            if payload.tracking_number and payload.tracking_number.strip()
+            else None
+        )
+        if provided_tracking:
+            if len(provided_tracking) < 5:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Nomor resi pengiriman minimal harus 5 karakter.",
+                )
+            order.tracking_number = provided_tracking
+        else:
+            # Auto-generate resi resmi jika dikosongkan oleh Admin
+            order.tracking_number = generate_tracking_number(order.courier_code or "REG")
+
+        order.shipped_at = datetime.now(timezone.utc)
+
+    # 3. Invarian Logistik COMPLETED: Catat completed_at
+    elif target_status == OrderStatus.COMPLETED.value:
+        order.completed_at = datetime.now(timezone.utc)
 
     order.status = target_status
     db.commit()

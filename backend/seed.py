@@ -38,6 +38,7 @@ MOCK_PRODUCTS = [
         "description": "Alas meja kerja kulit sintetis premium tahan air dan goresan untuk kenyamanan mengetik serta pergerakan mouse yang presisi.",
         "price": 17500,
         "stock_quantity": 15,
+        "weight_grams": 450,
         "images": [
             {
                 "image_url": "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=1000&q=80",
@@ -57,6 +58,7 @@ MOCK_PRODUCTS = [
         "description": "Speaker portabel tahan air bersertifikasi IPX7 dengan dentuman bass mendalam dan daya tahan baterai 12 jam pemutaran nonstop.",
         "price": 4500,
         "stock_quantity": 17,
+        "weight_grams": 650,
         "images": [
             {
                 "image_url": "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=1000&q=80",
@@ -76,6 +78,7 @@ MOCK_PRODUCTS = [
         "description": "Keyboard mekanikal nirkabel dengan switch taktil responsif, lampu latar RGB dinamis, dan konektivitas Bluetooth multi-device.",
         "price": 850000,
         "stock_quantity": 10,
+        "weight_grams": 850,
         "images": [
             {
                 "image_url": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=1000&q=80",
@@ -95,6 +98,7 @@ MOCK_PRODUCTS = [
         "description": "Headphone over-ear nirkabel dengan active noise cancellation (ANC) premium, audio resolusi tinggi, dan baterai hingga 30 jam.",
         "price": 12500,
         "stock_quantity": 5,
+        "weight_grams": 380,
         "images": [
             {
                 "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1000&q=80",
@@ -114,6 +118,7 @@ MOCK_PRODUCTS = [
         "description": "Jam tangan pintar dengan sensor pemantau detak jantung, pelacak kualitas tidur, GPS akurat, dan ketahanan air hingga 50 meter.",
         "price": 5000,
         "stock_quantity": 20,
+        "weight_grams": 120,
         "images": [
             {
                 "image_url": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1000&q=80",
@@ -181,6 +186,8 @@ def seed_products(db):
             product.description = item.get("description", product.description)
             product.price = item.get("price", product.price)
             product.stock_quantity = item.get("stock_quantity", product.stock_quantity)
+            if "weight_grams" in item:
+                product.weight_grams = item["weight_grams"]
             updated_products += 1
         else:
             product = Product(
@@ -189,6 +196,7 @@ def seed_products(db):
                 description=item["description"],
                 price=item["price"],
                 stock_quantity=item["stock_quantity"],
+                weight_grams=item.get("weight_grams", 1000),
                 image_url=primary_img_url,
             )
             db.add(product)
@@ -218,6 +226,7 @@ def seed_all():
     Base.metadata.create_all(bind=engine)
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url VARCHAR(500);"))
+        conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS weight_grams INTEGER DEFAULT 1000;"))
         conn.commit()
 
     db = SessionLocal()

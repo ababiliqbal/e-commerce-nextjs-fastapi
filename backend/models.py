@@ -60,6 +60,7 @@ class Product(Base):
     __table_args__ = (
         CheckConstraint("price >= 0", name="check_product_price_non_negative"),
         CheckConstraint("stock_quantity >= 0", name="check_product_stock_non_negative"),
+        CheckConstraint("weight_grams > 0", name="check_product_weight_grams_positive"),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -67,6 +68,7 @@ class Product(Base):
     description = Column(Text, nullable=True)
     price = Column(Numeric(12, 2), nullable=False)
     stock_quantity = Column(Integer, nullable=False)
+    weight_grams = Column(Integer, nullable=False, default=1000, server_default=text("1000"))
     is_active = Column(Boolean, default=True, nullable=False, server_default=text('true'))
     image_url = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -97,6 +99,8 @@ class Order(Base):
     __tablename__ = "orders"
     __table_args__ = (
         CheckConstraint("total_amount >= 0", name="check_order_total_amount_non_negative"),
+        CheckConstraint("shipping_cost >= 0", name="check_order_shipping_cost_non_negative"),
+        CheckConstraint("shipping_weight_grams > 0", name="check_order_shipping_weight_grams_positive"),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -109,7 +113,19 @@ class Order(Base):
     customer_name = Column(String(255), nullable=False)
     customer_email = Column(String(255), nullable=False)
     customer_phone = Column(String(50), nullable=False)
+    shipping_province = Column(String(100), nullable=True)
+    shipping_city_id = Column(String(50), nullable=True)
+    shipping_city_name = Column(String(100), nullable=True)
+    shipping_postal_code = Column(String(20), nullable=True)
     shipping_address = Column(Text, nullable=False)
+    courier_code = Column(String(50), nullable=True)
+    courier_service = Column(String(100), nullable=True)
+    shipping_etd = Column(String(50), nullable=True)
+    shipping_weight_grams = Column(Integer, nullable=False, default=1000, server_default=text("1000"))
+    shipping_cost = Column(Numeric(12, 2), nullable=False, default=0.00, server_default=text("0.00"))
+    tracking_number = Column(String(100), nullable=True, index=True)
+    shipped_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
     total_amount = Column(Numeric(12, 2), nullable=False)
     status = Column(String(50), nullable=False, default=OrderStatus.PENDING.value)
     payment_gateway_ref = Column(String(255), nullable=True)
